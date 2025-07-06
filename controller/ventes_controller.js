@@ -10,7 +10,7 @@ exports.create = async (req, res) => {
         const {
             userId,
             clientId,
-            nom,git remote add origin https://github.com/salif18/salespulse_desctop_pro_node.git
+            nom,
             contactClient,
             produits,
             montant_recu,
