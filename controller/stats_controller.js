@@ -52,50 +52,6 @@ exports.getStatistiquesGenerales = async (req, res) => {
     let coutAchatStock = 0;
     let quantitePertes = 0;
 
-    // // Calcul des ventes et remises
-    // ventes.forEach(v => {
-    //   totalVentesBrutes += v.total || 0;
-    //   montantEncaisse += v.montant_recu || 0;
-    //   resteTotal += v.reste || 0;
-
-    //   // Calcul des remises globales
-    //   if (v.remiseGlobale) {
-    //     const remise = v.remiseGlobaleType === 'pourcent'
-    //       ? (v.total * v.remiseGlobale / 100)
-    //       : v.remiseGlobale;
-    //     totalRemiseGlobale += remise;
-    //   }
-
-    //   // Calcul par produit
-    //   v.produits.forEach(p => {
-    //     // Coût d'achat
-    //     if (p.prix_achat && p.quantite) {
-    //       const cout = p.prix_achat * p.quantite;
-    //       coutAchatVentes += cout;
-    //     }
-
-    //     // Remises produits
-    //     if (p.remise) {
-    //       const remise = p.remise_type === 'pourcent'
-    //         ? (p.prix_unitaire * p.quantite * p.remise / 100)
-    //         : (p.remise * p.quantite);
-    //       totalRemisesProduits += remise;
-    //     }
-
-    //     // 🧾 TVA collectée par produit
-    //     if (p.tva > 0) {
-    //       const prixRemise = p.remise_type === 'pourcent'
-    //         ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
-    //         : (p.prix_unitaire - p.remise);
-
-    //       const baseHT = prixRemise * p.quantite;
-    //       const montantTVA = (baseHT * p.tva) / 100;
-
-    //       totalTVACollectee += montantTVA;
-    //     }
-    //   });
-    // });
-
     // Dans la boucle des ventes
     ventes.forEach(v => {
       totalVentesBrutes += v.total || 0;
@@ -199,6 +155,7 @@ exports.getStatistiquesGenerales = async (req, res) => {
     const nombreVentes = ventes.length;
     const nombreClients = clients.length;
     const produitsEnStock = produits.filter(p => p.stocks > 0).length;
+    const totalPiecesEnStock = produits.reduce((total, p) => total + (p.stocks > 0 ? p.stocks : 0), 0);
     const produitsRupture = produits.filter(p => p.stocks === 0).length;
     const totalDepenses = depenses.reduce((acc, d) => acc + (d.montants || 0), 0);
     const montantRembourse = remboursements.reduce((acc, r) => acc + (r.montant || 0), 0);
@@ -234,6 +191,7 @@ exports.getStatistiquesGenerales = async (req, res) => {
       nombreVentes,
       nombreClients,
       produitsEnStock,
+      totalPiecesEnStock,
       produitsRupture
     });
 

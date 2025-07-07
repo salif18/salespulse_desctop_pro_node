@@ -34,7 +34,7 @@ exports.registre = async (req, res) => {
     const hashedPassword = bcrypt.hashSync(password, salt);
 
     // Créer un instance du model user
-    const user = new Users({ name, boutique_name, numero, email, password: hashedPassword });
+    const user = new Users({ ...req.body, password: hashedPassword });
 
     console.log(user)
 
@@ -53,7 +53,7 @@ exports.registre = async (req, res) => {
       token: token,
       userId: user._id,
       userName: user.name,
-      userNumber:user.numero,
+      userNumber: user.numero,
       entreprise: user.boutique_name,
       message: "Inscription réussie avec succès"
     });
@@ -119,7 +119,7 @@ exports.login = async (req, res) => {
     return res.status(200).json({
       token: token,
       userId: user._id,
-      userNumber:user.numero,
+      userNumber: user.numero,
       userName: user.name,
       entreprise: user.boutique_name,
     });
@@ -194,7 +194,7 @@ exports.updateUser = async (req, res) => {
 
     // Trouver l'utilisateur par ID
     const user = await Users.findById(userId);
-    
+
     if (!user) {
       return res.status(404).json({
         status: false,
@@ -222,6 +222,47 @@ exports.updateUser = async (req, res) => {
     return res.status(500).json({
       status: false,
       message: error.message
+    });
+  }
+};
+
+exports.getUsers = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({ 
+        status: false,
+        message: 'userId est requis' 
+      });
+    }
+
+    // Récupérer tous les utilisateurs triés par date de création décroissante
+    const users = await Users.find({ adminId: userId }).sort({ createdAt: -1 });
+
+    // Formater la réponse
+    const formattedUsers = users.map(user => ({
+      id: user._id,
+      adminId: user.adminId,
+      name: user.name,
+      numero: user.numero,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    }));
+
+    return res.status(200).json({
+      status: true,
+      message: 'Liste des utilisateurs récupérée avec succès',
+      data: formattedUsers
+    });
+
+  } catch (error) {
+    console.error('Erreur dans getUsers:', error);
+    return res.status(500).json({
+      status: false,
+      message: 'Erreur serveur lors de la récupération des utilisateurs',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
   }
 };
