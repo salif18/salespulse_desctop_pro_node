@@ -17,7 +17,7 @@ const clientSchema = new mongoose.Schema({
     type: Number,
     required: true,
     default: 0
-  },
+  }, 
   montant_paye: {
     type: Number,
     required: true,

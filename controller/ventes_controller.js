@@ -107,7 +107,7 @@ exports.create = async (req, res) => {
         // ✅ Enregistrement de la vente
         const nouvelleVente = new Ventes({
             userId,
-            clientId: clientId || null,
+            clientId: clientId || new mongoose.Types.ObjectId(),
             nom,
             contactClient,
             produits: produitsComplets,

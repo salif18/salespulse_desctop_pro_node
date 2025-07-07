@@ -6,6 +6,7 @@ const Depenses = require("../models/depenses_model");
 const Reglements = require("../models/reglement_model")
 const mongoose = require("mongoose");
 
+
 exports.getStatistiquesGenerales = async (req, res) => {
   try {
     const { userId } = req.params;
@@ -41,6 +42,8 @@ exports.getStatistiquesGenerales = async (req, res) => {
     let totalRemises = 0;
     let totalRemisesProduits = 0;
     let totalRemiseGlobale = 0;
+    let totalTVACollectee = 0;
+
 
     // Coûts d'achat
     let coutAchatTotal = 0;
@@ -49,7 +52,51 @@ exports.getStatistiquesGenerales = async (req, res) => {
     let coutAchatStock = 0;
     let quantitePertes = 0;
 
-    // Calcul des ventes et remises
+    // // Calcul des ventes et remises
+    // ventes.forEach(v => {
+    //   totalVentesBrutes += v.total || 0;
+    //   montantEncaisse += v.montant_recu || 0;
+    //   resteTotal += v.reste || 0;
+
+    //   // Calcul des remises globales
+    //   if (v.remiseGlobale) {
+    //     const remise = v.remiseGlobaleType === 'pourcent'
+    //       ? (v.total * v.remiseGlobale / 100)
+    //       : v.remiseGlobale;
+    //     totalRemiseGlobale += remise;
+    //   }
+
+    //   // Calcul par produit
+    //   v.produits.forEach(p => {
+    //     // Coût d'achat
+    //     if (p.prix_achat && p.quantite) {
+    //       const cout = p.prix_achat * p.quantite;
+    //       coutAchatVentes += cout;
+    //     }
+
+    //     // Remises produits
+    //     if (p.remise) {
+    //       const remise = p.remise_type === 'pourcent'
+    //         ? (p.prix_unitaire * p.quantite * p.remise / 100)
+    //         : (p.remise * p.quantite);
+    //       totalRemisesProduits += remise;
+    //     }
+
+    //     // 🧾 TVA collectée par produit
+    //     if (p.tva > 0) {
+    //       const prixRemise = p.remise_type === 'pourcent'
+    //         ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+    //         : (p.prix_unitaire - p.remise);
+
+    //       const baseHT = prixRemise * p.quantite;
+    //       const montantTVA = (baseHT * p.tva) / 100;
+
+    //       totalTVACollectee += montantTVA;
+    //     }
+    //   });
+    // });
+
+    // Dans la boucle des ventes
     ventes.forEach(v => {
       totalVentesBrutes += v.total || 0;
       montantEncaisse += v.montant_recu || 0;
@@ -63,15 +110,50 @@ exports.getStatistiquesGenerales = async (req, res) => {
         totalRemiseGlobale += remise;
       }
 
-      // Calcul par produit
+      // Calcul du coût d'achat pour TOUTES les ventes (doit toujours être fait)
       v.produits.forEach(p => {
-        // Coût d'achat
         if (p.prix_achat && p.quantite) {
           const cout = p.prix_achat * p.quantite;
           coutAchatVentes += cout;
         }
+      });
 
-        // Remises produits
+      // Calcul de la TVA
+      if (v.tvaGlobale > 0) {
+        // Calcul TVA globale
+        let totalHT = v.produits.reduce((sum, p) => {
+          const prixRemise = p.remise_type === 'pourcent'
+            ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+            : (p.prix_unitaire - p.remise);
+          return sum + (prixRemise * p.quantite);
+        }, 0);
+
+        // Appliquer la remise globale si elle existe
+        if (v.remiseGlobale) {
+          totalHT -= v.remiseGlobaleType === 'pourcent'
+            ? (totalHT * v.remiseGlobale / 100)
+            : v.remiseGlobale;
+        }
+
+        const montantTVA = (totalHT * v.tvaGlobale) / 100;
+        totalTVACollectee += montantTVA;
+      } else {
+        // Calcul TVA par produit
+        v.produits.forEach(p => {
+          if (p.tva > 0) {
+            const prixRemise = p.remise_type === 'pourcent'
+              ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+              : (p.prix_unitaire - p.remise);
+
+            const baseHT = prixRemise * p.quantite;
+            const montantTVA = (baseHT * p.tva) / 100;
+            totalTVACollectee += montantTVA;
+          }
+        });
+      }
+
+      // Calcul des remises produits (doit toujours être fait)
+      v.produits.forEach(p => {
         if (p.remise) {
           const remise = p.remise_type === 'pourcent'
             ? (p.prix_unitaire * p.quantite * p.remise / 100)
@@ -85,17 +167,9 @@ exports.getStatistiquesGenerales = async (req, res) => {
     totalRemises = totalRemiseGlobale + totalRemisesProduits;
 
     // Calcul des pertes d'inventaire
-    const produitsMap = new Map(produits.map(p => [p._id.toString(), p]));
-
     mouvements.forEach(mvt => {
       // Vérification plus robuste
       if (!mvt.productId || !mvt.quantite || mvt.quantite >= 0) return;
-
-      // const produit = produitsMap.get(mvt.productId.toString()); // .toString() pour sécurité
-      // if (!produit || !produit.prix_achat) return;
-
-      // const quantitePerdue = Math.abs(mvt.quantite);
-      // const cout = produit.prix_achat * quantitePerdue;
 
       const prixAchat = mvt.prix_achat; // récupéré directement du mouvement
       if (!prixAchat) return;
@@ -148,6 +222,7 @@ exports.getStatistiquesGenerales = async (req, res) => {
       totalRemises: Number(totalRemises.toFixed(2)),
       totalRemisesProduits: Number(totalRemisesProduits.toFixed(2)),
       totalRemiseGlobale: Number(totalRemiseGlobale.toFixed(2)),
+      totalTVACollectee: Number(totalTVACollectee.toFixed(2)),
 
       // Bénéfices
       benefice: Number(benefice.toFixed(2)),
@@ -214,10 +289,24 @@ exports.getVentesHebdomadaires = async (req, res) => {
     const { userId } = req.params;
 
     // Calcul des dates pour la semaine en cours
+    // const now = new Date();
+    // const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
+    // const endOfWeek = new Date(startOfWeek);
+    // endOfWeek.setDate(startOfWeek.getDate() + 6);
+
     const now = new Date();
-    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
+    const dayOfWeek = now.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
+
+    // Trouver le lundi de la semaine
+    const diffToMonday = (dayOfWeek + 6) % 7; // décalage pour revenir au lundi
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - diffToMonday);
+    startOfWeek.setHours(0, 0, 0, 0); // Lundi 00:00:00.000
+
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setDate(startOfWeek.getDate() + 7); // Lundi suivant
+    endOfWeek.setHours(0, 0, 0, 0); // Lundi suivant 00:00:00.000
+
 
     // Aggrégation MongoDB pour les ventes par jour de la semaine
     const ventesParJour = await Ventes.aggregate([
@@ -256,24 +345,24 @@ exports.getVentesHebdomadaires = async (req, res) => {
     // });
 
     // Mapping explicite pour convertir MongoDB (1=Dim) -> Index (0=Lun ... 6=Dim)
-const mongoToIndex = {
-  1: 6, // Dimanche => index 6
-  2: 0, // Lundi => index 0
-  3: 1, // Mardi
-  4: 2, // Mercredi
-  5: 3, // Jeudi
-  6: 4, // Vendredi
-  7: 5  // Samedi
-};
+    const mongoToIndex = {
+      1: 6, // Dimanche => index 6
+      2: 0, // Lundi => index 0
+      3: 1, // Mardi
+      4: 2, // Mercredi
+      5: 3, // Jeudi
+      6: 4, // Vendredi
+      7: 5  // Samedi
+    };
 
-const result = Array(7).fill(0).map((_, index) => {
-  const found = ventesParJour.find(v => mongoToIndex[v.day] === index);
-  return {
-    day: index, // 0 = Lundi, ..., 6 = Dimanche
-    total: found ? found.total : 0,
-    quantity: found ? found.quantity : 0,
-  };
-});
+    const result = Array(7).fill(0).map((_, index) => {
+      const found = ventesParJour.find(v => mongoToIndex[v.day] === index);
+      return {
+        day: index, // 0 = Lundi, ..., 6 = Dimanche
+        total: found ? found.total : 0,
+        quantity: found ? found.quantity : 0,
+      };
+    });
 
 
     res.status(200).json(result);
