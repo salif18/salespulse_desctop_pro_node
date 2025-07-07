@@ -83,6 +83,7 @@ exports.updateStock = async (req, res) => {
       userId:userId,
       type,
       quantite: quantiteModifiee,
+      prix_achat:produit.prix_achat,
       ancien_stock: ancienStock,
       nouveau_stock: nouveauStock,
       date: new Date(),

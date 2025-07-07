@@ -2,7 +2,7 @@ const Ventes = require("../models/ventes_model")
 const Produits = require("../models/produits_model");
 const moment = require("moment");
 const mongoose = require("mongoose");
-const Mouvement = require("../models/mouvement_model");
+const Mouvements = require("../models/mouvement_model");
 
 exports.create = async (req, res) => {
     try {
@@ -137,11 +137,12 @@ exports.create = async (req, res) => {
 
             await produit.save();
 
-            const mouvement = new Mouvement({
+            const mouvement = new Mouvements({
                 productId: produit._id,
                 userId,
                 type: "vente",
                 quantite: item.quantite,
+                prix_achat: item.prix_achat,
                 ancien_stock: ancienStock,
                 nouveau_stock: nouveauStock,
                 description: `Vente à ${nom || "client"}`

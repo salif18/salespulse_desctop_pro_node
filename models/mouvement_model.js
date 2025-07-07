@@ -6,6 +6,7 @@ const mouvementSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
   type: { type: String, enum: ["ajout", "vente", "retrait", "perte", "modification"], required: true },
   quantite: { type: Number, required: true },
+  prix_achat: { type: Number, required: true },
   ancien_stock: Number,
   nouveau_stock: Number,
   description: String,

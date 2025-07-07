@@ -91,11 +91,18 @@ exports.getStatistiquesGenerales = async (req, res) => {
       // Vérification plus robuste
       if (!mvt.productId || !mvt.quantite || mvt.quantite >= 0) return;
 
-      const produit = produitsMap.get(mvt.productId.toString()); // .toString() pour sécurité
-      if (!produit || !produit.prix_achat) return;
+      // const produit = produitsMap.get(mvt.productId.toString()); // .toString() pour sécurité
+      // if (!produit || !produit.prix_achat) return;
+
+      // const quantitePerdue = Math.abs(mvt.quantite);
+      // const cout = produit.prix_achat * quantitePerdue;
+
+      const prixAchat = mvt.prix_achat; // récupéré directement du mouvement
+      if (!prixAchat) return;
 
       const quantitePerdue = Math.abs(mvt.quantite);
-      const cout = produit.prix_achat * quantitePerdue;
+      const cout = prixAchat * quantitePerdue;
+
 
       coutAchatPertes += cout;
       quantitePertes += quantitePerdue;
@@ -238,15 +245,36 @@ exports.getVentesHebdomadaires = async (req, res) => {
     ]);
 
     // Formatage des résultats pour avoir tous les jours (même ceux sans ventes)
-    const joursSemaine = [1, 2, 3, 4, 5, 6, 7]; // Lundi à dimanche en MongoDB
-    const result = joursSemaine.map(day => {
-      const found = ventesParJour.find(v => v.day === day) || { day, total: 0, quantity: 0 };
-      return {
-        day: day - 1, // Conversion pour 0-6 (Lun-Dim)
-        total: found.total,
-        quantity: found.quantity
-      };
-    });
+    // const joursSemaine = [1, 2, 3, 4, 5, 6, 7]; // Lundi à dimanche en MongoDB
+    // const result = joursSemaine.map(day => {
+    //   const found = ventesParJour.find(v => v.day === day) || { day, total: 0, quantity: 0 };
+    //   return {
+    //     day: day - 1, // Conversion pour 0-6 (Lun-Dim)
+    //     total: found.total,
+    //     quantity: found.quantity
+    //   };
+    // });
+
+    // Mapping explicite pour convertir MongoDB (1=Dim) -> Index (0=Lun ... 6=Dim)
+const mongoToIndex = {
+  1: 6, // Dimanche => index 6
+  2: 0, // Lundi => index 0
+  3: 1, // Mardi
+  4: 2, // Mercredi
+  5: 3, // Jeudi
+  6: 4, // Vendredi
+  7: 5  // Samedi
+};
+
+const result = Array(7).fill(0).map((_, index) => {
+  const found = ventesParJour.find(v => mongoToIndex[v.day] === index);
+  return {
+    day: index, // 0 = Lundi, ..., 6 = Dimanche
+    total: found ? found.total : 0,
+    quantity: found ? found.quantity : 0,
+  };
+});
+
 
     res.status(200).json(result);
   } catch (err) {
