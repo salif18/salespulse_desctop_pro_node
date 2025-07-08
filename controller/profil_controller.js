@@ -2,52 +2,56 @@ const Profils = require("../models/profil_model");
 const cloudinary = require("../middlewares/cloudinary")
 
 exports.create = async (req, res) => {
-  try {
-    const userId = req.auth.userId;
+    try {
+        const userId = req.auth.userId;
 
-    // Étape 1 : Rechercher s'il existe déjà un profil pour ce user
-    const profilExist = await Profils.findOne({ userId });
+        // Étape 1 : Rechercher s'il existe déjà un profil pour ce user
+        const profilExist = await Profils.findOne({ userId });
 
-    let imageUrl = "";
-    let cloudinaryId = "";
+        let imageUrl = "";
+        let cloudinaryId = "";
 
-    if (req.file) {
-      // Étape 2 : S'il y avait une image précédente, la supprimer de Cloudinary
-      if (profilExist && profilExist.cloudinaryId) {
-        await cloudinary.uploader.destroy(profilExist.cloudinaryId);
-      }
+        if (req.file) {
+            // Étape 2 : S'il y avait une image précédente, la supprimer de Cloudinary
+            if (profilExist && profilExist.cloudinaryId) {
+                await cloudinary.uploader.destroy(profilExist.cloudinaryId);
+            }
 
-      // Étape 3 : Uploader la nouvelle image
-      const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "salespulse/profils",
-      });
+            // Étape 3 : Uploader la nouvelle image
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                folder: "salespulse/profils",
+                quality: 'auto:good',
+                width: 800,
+                height: 800,
+                crop: 'limit'
+            });
 
-      imageUrl = result.secure_url;
-      cloudinaryId = result.public_id;
+            imageUrl = result.secure_url;
+            cloudinaryId = result.public_id;
+        }
+
+        // Étape 4 : S'il existait un profil, on le met à jour
+        if (profilExist) {
+            profilExist.image = imageUrl || profilExist.image;
+            profilExist.cloudinaryId = cloudinaryId || profilExist.cloudinaryId;
+
+            const updatedProfil = await profilExist.save();
+            return res.status(201).json({ message: "Mis à jour", profils: updatedProfil });
+        }
+
+        // Étape 5 : Sinon, on en crée un nouveau
+        const nouveauProfil = new Profils({
+            userId,
+            image: imageUrl,
+            cloudinaryId,
+        });
+
+        const profilSauvegarde = await nouveauProfil.save();
+        return res.status(201).json({ message: "Ajouté", profils: profilSauvegarde });
+
+    } catch (err) {
+        return res.status(500).json({ message: "Erreur", error: err.message });
     }
-
-    // Étape 4 : S'il existait un profil, on le met à jour
-    if (profilExist) {
-      profilExist.image = imageUrl || profilExist.image;
-      profilExist.cloudinaryId = cloudinaryId || profilExist.cloudinaryId;
-
-      const updatedProfil = await profilExist.save();
-      return res.status(201).json({ message: "Mis à jour", profils: updatedProfil });
-    }
-
-    // Étape 5 : Sinon, on en crée un nouveau
-    const nouveauProfil = new Profils({
-      userId,
-      image: imageUrl,
-      cloudinaryId,
-    });
-
-    const profilSauvegarde = await nouveauProfil.save();
-    return res.status(201).json({ message: "Ajouté", profils: profilSauvegarde });
-
-  } catch (err) {
-    return res.status(500).json({ message: "Erreur", error: err.message });
-  }
 };
 
 exports.getProfils = async (req, res) => {
@@ -74,7 +78,7 @@ exports.update = async (req, res) => {
             return res.status(400).json({ message: 'ID du profil manquant' });
         }
 
-       
+
 
         // Trouver le produit existant
         const profil = await Profils.findById(id);
@@ -107,7 +111,7 @@ exports.update = async (req, res) => {
             id,
             {
                 image: imageUrl, // URL Cloudinary renvoyée dans req.file.path
-                cloudinaryId: cloudinaryId,    
+                cloudinaryId: cloudinaryId,
             },
             { new: true } // retourne le document mis à jour
         );

@@ -14,7 +14,11 @@ exports.create = async (req, res, next) => {
             // Upload de l'image sur Cloudinary
             const result = await cloudinary.uploader.upload(req.file.path
                 , {
-                    folder: "salespulse/images"
+                    folder: "salespulse/images",
+                    quality: 'auto:good',
+                    width: 800,
+                    height: 800,
+                    crop: 'limit'
                 }
             );
             imageUrl = result.secure_url;
@@ -149,63 +153,111 @@ exports.update = async (req, res) => {
             return res.status(400).json({ message: 'ID du produit manquant' });
         }
 
-        const { nom, categories, prix_achat, prix_vente, stocks } = req.body;
+        // Validation des données requises
+        const { nom, categories, description, prix_achat, prix_vente, stocks, seuil_alerte, unite, isPromo, prix_promo, date_achat, date_expiration } = req.body;
 
         // Trouver le produit existant
         const produit = await Produits.findById(id);
-
         if (!produit) {
             return res.status(404).json({ message: 'Produit non trouvé' });
         }
 
         // Vérification d'autorisation
         if (produit.userId.toString() !== req.auth.userId) {
-            return res.status(401).json({ message: 'Non autorisé' });
+            return res.status(403).json({ message: 'Non autorisé' });
         }
 
-        let imageUrl = produit.image; // Garder l'image actuelle si pas de mise à jour
-        let cloudinaryId = produit.cloudinaryId; // Garder l'ancien Cloudinary ID si non modifié
+        // Validation des prix
+        if (prix_achat && prix_vente && parseFloat(prix_vente) < parseFloat(prix_achat)) {
+            return res.status(400).json({ message: 'Le prix de vente doit être supérieur au prix d\'achat' });
+        }
+
+        // Validation des dates
+        if (date_achat && date_expiration && new Date(date_expiration) < new Date(date_achat)) {
+            return res.status(400).json({ message: 'La date d\'expiration doit être après la date d\'achat' });
+        }
+
+        // Gestion de l'image
+        let imageUrl = produit.image;
+        let cloudinaryId = produit.cloudinaryId;
+        
         if (req.file) {
-            // Si le produit a déjà une image associée, la supprimer sur Cloudinary
-            if (produit.cloudinaryId) {
-                await cloudinary.uploader.destroy(produit.cloudinaryId);
-            }
+            try {
+                // Suppression de l'ancienne image si elle existe
+                if (produit.cloudinaryId) {
+                    await cloudinary.uploader.destroy(produit.cloudinaryId);
+                }
 
-            // Uploader la nouvelle image sur Cloudinary
-            const result = await cloudinary.uploader.upload(req.file.path);
-            imageUrl = result.secure_url; // URL sécurisée de la nouvelle image
-            cloudinaryId = result.public_id; // ID Cloudinary de la nouvelle image
+                // Upload de la nouvelle image
+                const result = await cloudinary.uploader.upload(req.file.path, {
+                    folder:  "salespulse/images",
+                    quality: 'auto:good',
+                    width: 800,
+                    height: 800,
+                    crop: 'limit'
+                });
+                
+                imageUrl = result.secure_url;
+                cloudinaryId = result.public_id;
+                
+                // Suppression du fichier temporaire
+                fs.unlinkSync(req.file.path);
+            } catch (uploadError) {
+                console.error('Erreur upload image:', uploadError);
+                if (req.file?.path) fs.unlinkSync(req.file.path);
+                return res.status(500).json({ message: 'Erreur lors du traitement de l\'image' });
+            }
         }
 
-        // Mise à jour du produit avec les nouvelles valeurs
+        // Préparation des données de mise à jour
+        const updateData = {
+            nom: nom || produit.nom,
+            image: imageUrl,
+            cloudinaryId,
+            categories: categories || produit.categories,
+            description: description || produit.description,
+            prix_achat: prix_achat || produit.prix_achat,
+            prix_vente: prix_vente || produit.prix_vente,
+            stocks: stocks || produit.stocks,
+            seuil_alerte: seuil_alerte || produit.seuil_alerte,
+            unite: unite || produit.unite,
+            isPromo: isPromo !== undefined ? isPromo : produit.isPromo,
+            prix_promo: isPromo ? (prix_promo || produit.prix_promo) : 0,
+            date_achat: date_achat || produit.date_achat,
+            date_expiration: date_expiration || produit.date_expiration,
+            updatedAt: new Date()
+        };
+
+        // Mise à jour du produit
         const produitMisAJour = await Produits.findByIdAndUpdate(
             id,
-            {
-                nom: nom ? nom : produit.nom,
-                image: imageUrl, // URL Cloudinary renvoyée dans req.file.path
-                cloudinaryId: cloudinaryId,
-                categories: categories.length > 0 ? categories : produit.categories,
-                prix_achat: prix_achat.length > 0 ? prix_achat : produit.prix_achat,
-                prix_vente: prix_vente.length > 0 ? prix_vente : produit.prix_vente,
-                stocks: stocks.length > 0 ? stocks : produit.stocks
-            },
-            { new: true } // retourne le document mis à jour
+            updateData,
+            { new: true, runValidators: true }
         );
 
         if (!produitMisAJour) {
             return res.status(400).json({ message: 'Erreur lors de la mise à jour du produit' });
         }
 
-        return res.status(200).json({ message: 'Produit modifié avec succès', produits: produitMisAJour });
+        console.log(produitMisAJour)
+        return res.status(200).json({ 
+            success: true,
+            message: 'Produit modifié avec succès',
+            data: produitMisAJour 
+        });
 
     } catch (err) {
-        return res.status(500).json({ message: err.message });
+        console.error('Erreur modification produit:', err);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Erreur serveur',
+            error: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
     }
 };
 
-
 exports.delete = async (req, res) => {
-    try {
+    try { 
 
         const { id } = req.params
         const produit = await Produits.findByIdAndDelete(id);
