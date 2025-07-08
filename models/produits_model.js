@@ -2,7 +2,8 @@ const mongoose = require("mongoose");
 
 // action future pour mode pro
 const produitSchema = new mongoose.Schema({
-  userId: {type: mongoose.Schema.Types.ObjectId,ref: 'Users',required: true},
+  userId: {type: mongoose.Schema.Types.ObjectId,ref: 'Users'},
+  adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users',required: true },
   cloudinaryId: { type: String },
   image: { type: String },
   nom: {type: String,required: true,trim: true},

@@ -6,7 +6,7 @@ const middleware = require("../middlewares/AuthMiddleware");
 
 
 Router.post("/",middleware,Reglement_Controller.create);
-Router.get("/:userId",middleware,Reglement_Controller.getReglements);
+Router.get("/",middleware,Reglement_Controller.getReglements);
 Router.delete("/single/:id",middleware,Reglement_Controller.delete);
 
 module.exports = Router;

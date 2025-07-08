@@ -56,9 +56,14 @@ exports.create = async (req, res) => {
 
 exports.getProfils = async (req, res) => {
     try {
-        const { userId } = req.params
+           const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        const profil = await Profils.findOne({ userId });
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
+        const profil = await Profils.findOne({ adminId });
 
         if (!profil) {
             return res.status(404).json({ message: 'Profil non trouvé' });

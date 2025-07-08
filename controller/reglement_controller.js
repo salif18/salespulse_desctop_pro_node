@@ -37,7 +37,7 @@ exports.create = async (req, res) => {
     }
 
     // 💾 Enregistrer le règlement
-    const nouveauReglement = new Reglements({ ...req.body, nom: vente.nom });
+    const nouveauReglement = new Reglements({ ...req.body,adminId:req.auth.adminId, nom: vente.nom });
     const reglementSauvegarde = await nouveauReglement.save();
 
     // 💾 Mettre à jour la vente
@@ -60,15 +60,15 @@ exports.create = async (req, res) => {
 
 exports.getReglements = async (req, res) => {
     try {
-        const { userId } = req.params
+         const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
-        const reglements = await Reglements.find({ userId }).sort({ date: -1 });
+        const reglements = await Reglements.find({ adminId }).sort({ date: -1 });
 
         return res.status(200).json({ message: "OK", reglements: reglements });
     } catch (err) {

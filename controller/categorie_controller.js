@@ -24,16 +24,16 @@ exports.create = async (req, res) => {
 exports.getCategories = async (req, res) => {
     try {
 
-        const { userId } = req.params; // Extraire userId de l'URL
+       const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
         // Récupérer les catégories selon le userId
-        const results = await Categories.find({ userId }).sort({ name: 1 });
+        const results = await Categories.find({ adminId }).sort({ name: 1 });
 
         return res.status(200).json(
             { message: 'ok', results:results },

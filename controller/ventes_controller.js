@@ -7,8 +7,9 @@ const Mouvements = require("../models/mouvement_model");
 exports.create = async (req, res) => {
     try {
         console.log(req.body)
-        const {
+        const {       
             userId,
+            adminId,
             clientId,
             nom,
             contactClient,
@@ -107,6 +108,7 @@ exports.create = async (req, res) => {
         // ✅ Enregistrement de la vente
         const nouvelleVente = new Ventes({
             userId,
+            adminId,
             clientId: clientId || new mongoose.Types.ObjectId(),
             nom,
             contactClient,
@@ -140,6 +142,7 @@ exports.create = async (req, res) => {
             const mouvement = new Mouvements({
                 productId: produit._id,
                 userId,
+                adminId,
                 type: "vente",
                 quantite: item.quantite,
                 prix_achat: item.prix_achat,
@@ -169,12 +172,18 @@ exports.create = async (req, res) => {
 // Route pour obtenir toutes les ventes
 exports.getVentes = async (req, res, next) => {
     try {
-        const userId = req.params.userId;
+        const { adminId } = req.auth; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
         const { dateDebut, dateFin, clientId } = req.query;
 
         const filter = {};
 
-        if (userId) filter.userId = userId;
+        if (adminId) filter.adminId = adminId;
         if (clientId) filter.clientId = clientId;
 
         if (dateDebut && dateFin) {
@@ -211,7 +220,7 @@ exports.delete = async (req, res, next) => {
     try {
         const { id } = req.params
         // Trouver la vente par ID
-        const vente = await Vente.findById(id);
+        const vente = await Ventes.findById(id);
 
         if (!vente) {
             return res.status(404).json({ message: 'Vente non trouvée' });

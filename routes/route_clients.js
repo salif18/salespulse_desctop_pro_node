@@ -7,7 +7,7 @@ const middleware = require("../middlewares/AuthMiddleware");
 
 
 Router.post("/",middleware,cloudFile,Clients_Controller.create);
-Router.get("/:userId",middleware,Clients_Controller.getClients);
+Router.get("/",middleware,Clients_Controller.getClients);
 Router.delete("/single/:id",middleware,Clients_Controller.delete);
 
 module.exports = Router;

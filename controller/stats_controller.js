@@ -9,7 +9,13 @@ const mongoose = require("mongoose");
 
 exports.getStatistiquesGenerales = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.auth; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
     const { mois } = req.query;
 
     const start = mois
@@ -19,17 +25,17 @@ exports.getStatistiquesGenerales = async (req, res) => {
 
     // Récupération des données en parallèle
     const [ventes, mouvements, produits, clients, depenses, remboursements] = await Promise.all([
-      Ventes.find({ userId, createdAt: { $gte: start, $lt: end } }),
+      Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }),
       Mouvements.find({
-        userId,
+        adminId,
         createdAt: { $gte: start, $lt: end },
         $or: [{ type: 'retrait' }, { type: 'perte' }]
       }),
-      Produits.find({ userId }),
-      Clients.find({ userId }),
-      Depenses.find({ userId, createdAt: { $gte: start, $lt: end } }),
+      Produits.find({ adminId }),
+      Clients.find({ adminId }),
+      Depenses.find({ adminId, createdAt: { $gte: start, $lt: end } }),
       Reglements.find({
-        userId,
+        adminId,
         type: "remboursement",
         createdAt: { $gte: start, $lt: end }
       })
@@ -206,7 +212,13 @@ exports.getStatistiquesGenerales = async (req, res) => {
 
 exports.getVentesDuJour = async (req, res) => {
   try {
-    const { userId } = req.params;
+     const { adminId } = req.auth; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
     const maintenant = new Date();
     const debutJour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
@@ -216,7 +228,7 @@ exports.getVentesDuJour = async (req, res) => {
     const result = await Ventes.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(userId),
+          adminId: new mongoose.Types.ObjectId(adminId),
           createdAt: { $gte: debutJour, $lt: finJour }
         }
       },
@@ -244,7 +256,13 @@ exports.getVentesDuJour = async (req, res) => {
 
 exports.getVentesHebdomadaires = async (req, res) => {
   try {
-    const { userId } = req.params;
+     const { adminId } = req.auth; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
     // Calcul des dates pour la semaine en cours
     // const now = new Date();
@@ -270,7 +288,7 @@ exports.getVentesHebdomadaires = async (req, res) => {
     const ventesParJour = await Ventes.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(userId),
+          adminId: new mongoose.Types.ObjectId(adminId),
           createdAt: { $gte: startOfWeek, $lte: endOfWeek }
         }
       },
@@ -290,17 +308,6 @@ exports.getVentesHebdomadaires = async (req, res) => {
         }
       }
     ]);
-
-    // Formatage des résultats pour avoir tous les jours (même ceux sans ventes)
-    // const joursSemaine = [1, 2, 3, 4, 5, 6, 7]; // Lundi à dimanche en MongoDB
-    // const result = joursSemaine.map(day => {
-    //   const found = ventesParJour.find(v => v.day === day) || { day, total: 0, quantity: 0 };
-    //   return {
-    //     day: day - 1, // Conversion pour 0-6 (Lun-Dim)
-    //     total: found.total,
-    //     quantity: found.quantity
-    //   };
-    // });
 
     // Mapping explicite pour convertir MongoDB (1=Dim) -> Index (0=Lun ... 6=Dim)
     const mongoToIndex = {
@@ -332,7 +339,13 @@ exports.getVentesHebdomadaires = async (req, res) => {
 
 exports.getVentesAnnee = async (req, res) => {
   try {
-    const { userId } = req.params;
+    const { adminId } = req.auth; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
     const anneeActuelle = new Date().getFullYear();
 
@@ -342,7 +355,7 @@ exports.getVentesAnnee = async (req, res) => {
     const result = await Ventes.aggregate([
       {
         $match: {
-          userId: new mongoose.Types.ObjectId(userId),
+          adminId: new mongoose.Types.ObjectId(adminId),
           createdAt: { $gte: debutAnnee, $lt: finAnnee }
         }
       },
@@ -368,10 +381,15 @@ exports.getVentesAnnee = async (req, res) => {
 // Récupérer les ventes impayées ou partielles
 exports.getClientsEnRetard = async (req, res) => {
   try {
-    const { userId } = req.params;
+     const { adminId } = req.auth; // On récupère adminId depuis le token
 
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
     const ventes = await Ventes.find({
-      userId,
+      adminId,
       statut: { $in: ['crédit', 'partiel'] }
     }).populate('clientId');
 

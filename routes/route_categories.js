@@ -6,7 +6,7 @@ const middleware = require("../middlewares/AuthMiddleware");
 
 
 Router.post("/",middleware,Categories_Controller.create);
-Router.get("/:userId",middleware,Categories_Controller.getCategories);
+Router.get("/",middleware,Categories_Controller.getCategories);
 Router.delete("/single/:id",middleware,Categories_Controller.delete);
 
 module.exports = Router;

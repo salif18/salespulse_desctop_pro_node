@@ -43,18 +43,30 @@ exports.registre = async (req, res) => {
 
     // Créer un token JWT
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id , adminId: user.adminId || user._id },
       process.env.SECRET_KEY,
-      { expiresIn: "24h" }
+      { expiresIn: "5min" }
     );
 
+     const userData = {
+      id: user._id,
+      adminId: user._id,
+      name: user.name,
+      numero: user.numero,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    }
     // Envoyer la réponse
     return res.status(201).json({
       token: token,
       userId: user._id,
+      adminId: user.adminId || user._id,
+      role: user.role, // ✅ Ajout ici
       userName: user.name,
       userNumber: user.numero,
       entreprise: user.boutique_name,
+      userData:userData,
       message: "Inscription réussie avec succès"
     });
   } catch (error) {
@@ -109,19 +121,33 @@ exports.login = async (req, res) => {
     user.tentativesExpires = Date.now();
 
     const token = jwt.sign(
-      { userId: user._id },
+      { userId: user._id ,adminId: user.adminId || user._id},
       process.env.SECRET_KEY,
-      { expiresIn: "24h" }
+      { expiresIn: "5min" }
     );
 
     await user.save();
+    const userData = {
+      id: user._id,
+      adminId: user.adminId,
+      name: user.name,
+      numero: user.numero,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt
+    }
+
+   
 
     return res.status(200).json({
       token: token,
       userId: user._id,
+      adminId: user.adminId || user._id,
+      role: user.role, // ✅ Ajout ici
       userNumber: user.numero,
       userName: user.name,
       entreprise: user.boutique_name,
+      userData :userData
     });
 
   } catch (error) {
@@ -228,17 +254,16 @@ exports.updateUser = async (req, res) => {
 
 exports.getUsers = async (req, res) => {
   try {
-    const { userId } = req.params;
-    
-    if (!userId) {
-      return res.status(400).json({ 
-        status: false,
-        message: 'userId est requis' 
+     const adminId = req.auth?.adminId; // On récupère adminId depuis le token
+
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
       });
     }
 
     // Récupérer tous les utilisateurs triés par date de création décroissante
-    const users = await Users.find({ adminId: userId }).sort({ createdAt: -1 });
+    const users = await Users.find({ adminId:adminId}).sort({ createdAt: -1 });
 
     // Formater la réponse
     const formattedUsers = users.map(user => ({

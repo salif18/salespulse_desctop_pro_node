@@ -14,15 +14,15 @@ exports.create = async (req, res) => {
 
 exports.getFournisseurs = async (req, res) => {
     try {
-        const { userId } = req.params
+        const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
-        const fournisseurs = await Fournisseurs.find({ userId }).sort({ nom: 1 });
+        const fournisseurs = await Fournisseurs.find({ adminId }).sort({ nom: 1 });
 
         return res.status(200).json({ message: "OK", fournisseurs:fournisseurs });
     } catch (err) {

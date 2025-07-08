@@ -6,7 +6,7 @@ exports.getMouvements = async (req, res) => {
     console.log(req.query)
     
     const filtre = {
-      userId: req.auth.userId, // ➕ Filtrer par l'utilisateur connecté
+      adminId: req.auth.adminId, // ➕ Filtrer par l'utilisateur connecté
     };
     if (productId) filtre.productId = productId;
     if (type) filtre.type = type;

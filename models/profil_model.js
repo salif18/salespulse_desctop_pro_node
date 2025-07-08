@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 // action future pour mode pro
 const schema = new mongoose.Schema({
   userId: {type: mongoose.Schema.Types.ObjectId,ref: 'Users',required: true},
+  adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
   cloudinaryId: { type: String },
   image: { type: String },
 

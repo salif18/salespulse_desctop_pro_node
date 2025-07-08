@@ -25,6 +25,7 @@ exports.create = async (req, res) => {
         const nouveauClient = new Clients({
             ...req.body,
             userId: req.auth.userId,// Associer le produit à l'utilisateur
+            adminId:req.auth.adminId,
             cloudinaryId: cloudinaryId,
             image: req.file ? imageUrl : "",
         });
@@ -39,15 +40,15 @@ exports.create = async (req, res) => {
 
 exports.getClients = async (req, res) => {
     try {
-        const { userId } = req.params
+        const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
-        const clients = await Clients.find({ userId }).sort({ nom: 1 });
+        const clients = await Clients.find({ adminId }).sort({ nom: 1 });
 
         return res.status(200).json({ message: "OK", clients: clients });
     } catch (err) {

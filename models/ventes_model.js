@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 // Action future pour mode pro
 const venteSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
+  adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
   clientId: { type: mongoose.Schema.Types.ObjectId, }, // si tu gères des clients
   nom: { type: String },
   contactClient: { type: String },

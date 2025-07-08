@@ -25,15 +25,15 @@ exports.create = async (req, res) => {
 exports.getDepenses = async (req, res) => {
     try {
 
-        const { userId } = req.params;
+       const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
         // Récupérer toutes les dépenses triées par date de création décroissante
-        const results = await Depense.find({ userId }).sort({ timestamps: -1 });
+        const results = await Depense.find({ adminId }).sort({ timestamps: -1 });
 
         // Calcul des dépenses
         const depensesTotal = results.reduce((total, depense) => total + depense.montants, 0);

@@ -4,7 +4,7 @@ const uniqueValidator = require("mongoose-unique-validator");
 
 const schema = mongoose.Schema({
     name: { type: String, require: true },
-    adminId:{ type: String},
+    adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
     boutique_name:{type:String},
     numero: { type: String, require: true, unique: true },
     email: { type: String, require: true, unique: true },

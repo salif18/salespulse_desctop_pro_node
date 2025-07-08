@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const creditSchema = new mongoose.Schema({
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
+  adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
   nom: {
     type: String,
     required: true,

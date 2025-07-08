@@ -29,7 +29,7 @@ exports.create = async (req, res, next) => {
         const nouveauProduit = new Produits({
             ...req.body,
             image: req.file ? imageUrl : req.body.image,  // URL Cloudinary renvoyée dans req.file.path
-            userId: req.auth.userId,// Associer le produit à l'utilisateur
+            adminId: req.auth.adminId,// Associer le produit à l'utilisateur
             cloudinaryId: cloudinaryId, // Enregistrer l'ID Cloudinary si nécessaire
         });
         // Sauvegarde du produit dans la base de données
@@ -44,10 +44,10 @@ exports.create = async (req, res, next) => {
 };
 exports.updateStock = async (req, res) => {
   try {
-    const { stocks, type, description } = req.body; 
-    const userId = req.auth.userId;
+    const { userId, stocks, type, description } = req.body; 
+    const adminId = req.auth.adminId;
 
-    console.log(req.body)
+   
 
     if (stocks === undefined || stocks < 0) {
       return res.status(400).json({ message: "Stock invalide" });
@@ -84,7 +84,8 @@ exports.updateStock = async (req, res) => {
 
     const nouveauMouvement = new Mouvements({
       productId: produit._id,
-      userId:userId,
+      adminId:adminId,
+      userId,
       type,
       quantite: quantiteModifiee,
       prix_achat:produit.prix_achat,
@@ -110,15 +111,15 @@ exports.updateStock = async (req, res) => {
 
 exports.getProduits = async (req, res) => {
     try {
-        const { userId } = req.params
+        const { adminId } = req.auth; // On récupère adminId depuis le token
 
-        if (!userId) {
-            return res.status(400).json(
-                { message: 'userId est requis' },
-            );
-        }
+    if (!adminId) {
+      return res.status(400).json({
+        message: 'adminId est requis',
+      });
+    }
 
-        const produits = await Produits.find({ userId }).sort({ date_achat: -1 });
+        const produits = await Produits.find({ adminId }).sort({ date_achat: -1 });
         const totalAchat = produits.map((x) => x.prix_achat * x.stocks).reduce((a, b) => a + b, 0);
 
         // Calcule le nombre total de stocks
@@ -163,7 +164,7 @@ exports.update = async (req, res) => {
         }
 
         // Vérification d'autorisation
-        if (produit.userId.toString() !== req.auth.userId) {
+        if (produit.adminId.toString() !== req.auth.adminId) {
             return res.status(403).json({ message: 'Non autorisé' });
         }
 
@@ -267,7 +268,7 @@ exports.delete = async (req, res) => {
         }
 
 
-        if (produit.userId.toString() !== req.auth.userId) {
+        if (produit.adminId.toString() !== req.auth.adminId) {
             return res.status(401).json({ message: 'Non autorisé' });
         }
         // Si le produit a un cloudinaryId, supprimer l'image sur Cloudinary

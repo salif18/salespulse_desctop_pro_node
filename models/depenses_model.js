@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 
 const schema = mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
+    adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
     montants: { type: Number, required: true },
     motifs: { type: String, required: true },
     type: { type: String, required: true },

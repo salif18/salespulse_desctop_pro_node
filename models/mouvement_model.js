@@ -5,6 +5,7 @@ const mouvementSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: "Produits", required: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: "Users", required: true },
   type: { type: String, enum: ["ajout", "vente", "retrait", "perte", "modification"], required: true },
+  adminId:{ type: mongoose.Schema.Types.ObjectId, ref: 'Users' },
   quantite: { type: Number, required: true },
   prix_achat: { type: Number, required: true },
   ancien_stock: Number,
