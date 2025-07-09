@@ -110,8 +110,8 @@ exports.updateStock = async (req, res) => {
 };
 
 exports.getProduits = async (req, res) => {
-    try {
-        const { adminId } = req.auth; // On récupère adminId depuis le token
+  try {
+    const { adminId } = req.auth;
 
     if (!adminId) {
       return res.status(400).json({
@@ -119,17 +119,37 @@ exports.getProduits = async (req, res) => {
       });
     }
 
-        const produits = await Produits.find({ adminId }).sort({ date_achat: -1 });
-        const totalAchat = produits.map((x) => x.prix_achat * x.stocks).reduce((a, b) => a + b, 0);
+    // Récupère tous les produits de l’admin
+    const produits = await Produits.find({ adminId }).sort({ date_achat: -1 });
 
-        // Calcule le nombre total de stocks
-        const stocks = produits.reduce((acc, item) => acc + (item?.stocks || 0), 0);
+    // Marque les produits expirés
+    const produitsAvecStatut = produits.map(produit => {
+      const isExpire =
+        produit.date_expiration && new Date() > produit.date_expiration;
 
-        return res.status(200).json({ message: "OK", produits: produits, totalAchatOfAchat: totalAchat, stocks });
-    } catch (err) {
-        return res.status(500).json({ message: "Erreur", error: err.message });
-    }
+      return {
+        ...produit.toObject(), // converti en objet simple
+        statut: isExpire ? 'expiré' : produit.statut,
+      };
+    });
+
+    const totalAchat = produitsAvecStatut
+      .map(p => p.prix_achat * p.stocks)
+      .reduce((a, b) => a + b, 0);
+
+    const stocks = produitsAvecStatut.reduce((acc, p) => acc + (p.stocks || 0), 0);
+
+    return res.status(200).json({
+      message: "OK",
+      produits: produitsAvecStatut,
+      totalAchatOfAchat: totalAchat,
+      stocks,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: "Erreur", error: err.message });
+  }
 };
+
 
 exports.getOneProduits = async (req, res) => {
     try {

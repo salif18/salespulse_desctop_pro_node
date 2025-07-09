@@ -19,6 +19,8 @@ const venteSchema = new mongoose.Schema({
       stocks: Number,
       remise: { type: Number, default: 0 }, // en FCFA ou %
       remise_type: { type: String, enum: ['fcfa', 'pourcent'], default: 'fcfa' },
+      isPromo: {type: Boolean,default: false,},
+      prix_vente: { type: Number },
       tva: { type: Number, default: 0 }, // % appliqué (ex: 18)
       frais_livraison: { type: Number, default: 0 }, // en FCFA
       frais_emballage: { type: Number, default: 0 }, // en FCFA

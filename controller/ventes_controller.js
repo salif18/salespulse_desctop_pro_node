@@ -75,6 +75,8 @@ exports.create = async (req, res) => {
                 nom: produit.nom,
                 image: produit.image || "",
                 prix_achat: produit.prix_achat,
+                prix_vente:item.prix_vente,
+                isPromo:item.isPromo,
                 prix_unitaire: item.prix_unitaire,
                 quantite: item.quantite,
                 sous_total,
