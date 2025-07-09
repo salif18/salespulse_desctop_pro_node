@@ -212,7 +212,7 @@ exports.getStatistiquesGenerales = async (req, res) => {
 
 exports.getVentesDuJour = async (req, res) => {
   try {
-     const { adminId } = req.auth; // On récupère adminId depuis le token
+    const { adminId } = req.auth; // On récupère adminId depuis le token
 
     if (!adminId) {
       return res.status(400).json({
@@ -233,19 +233,30 @@ exports.getVentesDuJour = async (req, res) => {
         }
       },
       {
-        $unwind: "$produits"
-      },
-      {
-        $group: {
-          _id: { $hour: "$createdAt" },
-          total: { $sum: "$total" },
-          quantite: { $sum: "$produits.quantite" }
+        $facet: {
+          totalParHeure: [
+            {
+              $group: {
+                _id: { $hour: "$createdAt" },
+                total: { $sum: "$total" },
+              }
+            },
+            { $sort: { _id: 1 } }
+          ],
+          quantiteParHeure: [
+            { $unwind: "$produits" },
+            {
+              $group: {
+                _id: { $hour: "$createdAt" },
+                quantite: { $sum: "$produits.quantite" }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
         }
-      },
-      {
-        $sort: { _id: 1 }
       }
     ]);
+
 
     res.status(200).json(result);
   } catch (err) {
@@ -256,19 +267,13 @@ exports.getVentesDuJour = async (req, res) => {
 
 exports.getVentesHebdomadaires = async (req, res) => {
   try {
-     const { adminId } = req.auth; // On récupère adminId depuis le token
+    const { adminId } = req.auth; // On récupère adminId depuis le token
 
     if (!adminId) {
       return res.status(400).json({
         message: 'adminId est requis',
       });
     }
-
-    // Calcul des dates pour la semaine en cours
-    // const now = new Date();
-    // const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay() + (now.getDay() === 0 ? -6 : 1)));
-    // const endOfWeek = new Date(startOfWeek);
-    // endOfWeek.setDate(startOfWeek.getDate() + 6);
 
     const now = new Date();
     const dayOfWeek = now.getDay(); // 0 = Dimanche, 1 = Lundi, ..., 6 = Samedi
@@ -359,15 +364,29 @@ exports.getVentesAnnee = async (req, res) => {
           createdAt: { $gte: debutAnnee, $lt: finAnnee }
         }
       },
-      { $unwind: "$produits" },
       {
-        $group: {
-          _id: { $month: "$createdAt" },
-          total: { $sum: "$total" },
-          quantite: { $sum: "$produits.quantite" }
+        $facet: {
+          totalParMois: [
+            {
+              $group: {
+                _id: { $month: "$createdAt" },
+                total: { $sum: "$total" }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ],
+          quantiteParMois: [
+            { $unwind: "$produits" },
+            {
+              $group: {
+                _id: { $month: "$createdAt" },
+                quantite: { $sum: "$produits.quantite" }
+              }
+            },
+            { $sort: { _id: 1 } }
+          ]
         }
-      },
-      { $sort: { _id: 1 } }
+      }
     ]);
 
     res.status(200).json(result);
@@ -381,7 +400,7 @@ exports.getVentesAnnee = async (req, res) => {
 // Récupérer les ventes impayées ou partielles
 exports.getClientsEnRetard = async (req, res) => {
   try {
-     const { adminId } = req.auth; // On récupère adminId depuis le token
+    const { adminId } = req.auth; // On récupère adminId depuis le token
 
     if (!adminId) {
       return res.status(400).json({
