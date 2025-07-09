@@ -45,7 +45,7 @@ exports.registre = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id , adminId: user.adminId || user._id },
       process.env.SECRET_KEY,
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
      const userData = {
@@ -123,7 +123,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { userId: user._id ,adminId: user.adminId || user._id},
       process.env.SECRET_KEY,
-      { expiresIn: "1h" }
+      { expiresIn: "24h" }
     );
 
     await user.save();
