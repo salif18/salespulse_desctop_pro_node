@@ -431,3 +431,81 @@ exports.getClientsEnRetard = async (req, res) => {
 };
 
 
+exports.getOperationsByUser = async (req, res) => {
+  try {
+    const { userId } = req.query;
+    const periode = req.query.periode || 'jour';
+
+    // Valider userId
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "userId invalide ou manquant" });
+    }
+
+    const { debut, fin } = calculerIntervalle(periode);
+
+    const ventes = await Ventes.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: debut, $lt: fin }
+    });
+
+    const reglements = await Reglements.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: debut, $lt: fin }
+    });
+
+    const produitsVendus = ventes.flatMap(v => v.produits);
+
+    const mouvements = await Mouvements.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: debut, $lt: fin }
+    }).populate("productId", "nom image prix_achat");
+
+
+    const depenses = await Depenses.find({
+      userId: new mongoose.Types.ObjectId(userId),
+      createdAt: { $gte: debut, $lt: fin }
+    });
+
+    const stats = {
+      totalVentes: ventes.length,
+      montantTotal: ventes.reduce((sum, v) => sum + v.total, 0),
+      montantRecu: ventes.reduce((sum, v) => sum + v.montant_recu, 0),
+      totalDepenses: depenses.reduce((sum, d) => sum + d.montants, 0),
+      totalProduits: produitsVendus.length,
+    };
+
+    res.json({ stats, ventes, produitsVendus, reglements, mouvements, depenses });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+function calculerIntervalle(periode) {
+  const maintenant = new Date();
+  let debut, fin;
+
+  if (periode === 'jour') {
+    debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
+    fin = new Date(debut);
+    fin.setDate(fin.getDate() + 1);
+  } else if (periode === 'semaine') {
+    const jourSemaine = maintenant.getDay();
+    const diff = jourSemaine === 0 ? 6 : jourSemaine - 1;
+    debut = new Date(maintenant);
+    debut.setDate(maintenant.getDate() - diff);
+    debut.setHours(0, 0, 0, 0);
+    fin = new Date(debut);
+    fin.setDate(debut.getDate() + 7);
+  } else if (periode === 'mois') {
+    debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+    fin = new Date(maintenant.getFullYear(), maintenant.getMonth() + 1, 1);
+  } else {
+    debut = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate());
+    fin = new Date(debut);
+    fin.setDate(fin.getDate() + 1);
+  }
+
+  return { debut, fin };
+}
