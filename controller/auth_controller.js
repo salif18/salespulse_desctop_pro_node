@@ -13,7 +13,7 @@ const TENTATIVES_MAX = 5;
 //FONCTION D'ENREGISTREMENT DES UTILISATEURS
 exports.registre = async (req, res) => {
   try {
-    const { name, boutique_name, numero, email, password } = req.body;
+    const {numero, email, password } = req.body;
 
     // Vérifiez si l'utilisateur existe
     const userExiste = await Users.findOne({
@@ -48,15 +48,7 @@ exports.registre = async (req, res) => {
       { expiresIn: "24h" }
     );
 
-     const userData = {
-      id: user._id,
-      adminId: user._id,
-      name: user.name,
-      numero: user.numero,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt
-    }
+
     // Envoyer la réponse
     return res.status(201).json({
       token: token,
@@ -66,7 +58,6 @@ exports.registre = async (req, res) => {
       userName: user.name,
       userNumber: user.numero,
       entreprise: user.boutique_name,
-      userData:userData,
       message: "Inscription réussie avec succès"
     });
   } catch (error) {
@@ -127,27 +118,15 @@ exports.login = async (req, res) => {
     );
 
     await user.save();
-    const userData = {
-      id: user._id,
-      adminId: user.adminId,
-      name: user.name,
-      numero: user.numero,
-      email: user.email,
-      role: user.role,
-      createdAt: user.createdAt
-    }
-
-   
 
     return res.status(200).json({
       token: token,
       userId: user._id,
       adminId: user.adminId || user._id,
       role: user.role, // ✅ Ajout ici
-      userNumber: user.numero,
       userName: user.name,
-      entreprise: user.boutique_name,
-      userData :userData
+      userNumber: user.numero,
+      entreprise: user.boutique_name || "boutique non defini",
     });
 
   } catch (error) {
@@ -267,7 +246,7 @@ exports.getUsers = async (req, res) => {
 
     // Formater la réponse
     const formattedUsers = users.map(user => ({
-      id: user._id,
+      _id: user._id,
       adminId: user.adminId,
       name: user.name,
       numero: user.numero,

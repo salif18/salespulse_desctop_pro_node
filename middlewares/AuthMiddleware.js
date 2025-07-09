@@ -20,7 +20,7 @@ const middleware = async (req, res, next) => {
     req.auth = {
       userId: user._id.toString(),
       adminId: user.adminId ? user.adminId : user._id.toString(),
-      role: user.role
+      role: user.role,
     };
 
     next();
