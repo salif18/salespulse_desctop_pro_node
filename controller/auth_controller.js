@@ -2,6 +2,7 @@ require("dotenv").config();
 const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs');
 const Users = require("../models/user_model");
+const Abonnements = require("../models/abonnement_model"); // 🔁 importe ton modèle Abonnement
 
 
 // Durée de blocage en millisecondes (1 heure)
@@ -36,10 +37,22 @@ exports.registre = async (req, res) => {
     // Créer un instance du model user
     const user = new Users({ ...req.body, password: hashedPassword });
 
-    console.log(user)
 
     // Enregistrer l'utilisateur
     await user.save();
+
+     // 👉 Ajouter ici l’abonnement d’essai (7 jours)
+    const dateDebut = new Date();
+    const dateFin = new Date();
+    dateFin.setDate(dateDebut.getDate() + 7);
+
+    await Abonnements.create({
+      userId: user._id,
+      type: "essai",
+      date_debut: dateDebut,
+      date_fin: dateFin,
+      statut: "actif",
+    });
 
     // Créer un token JWT
     const token = jwt.sign(

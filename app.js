@@ -13,10 +13,11 @@ const Categories_Router = require("./routes/route_categories")
 const Depenses_Router = require("./routes/route_depense")
 const Fournisseurs_Router = require("./routes/route_fournisseurs")
 const Clients_Router = require("./routes/route_clients")
-const Credits_Router = require("./routes/route_credits")
 const Reglement_Router = require("./routes/route_reglement")
 const Mouvements_Router = require("./routes/route_mouvements")
 const Statistiques_Router = require("./routes/route_stats")
+const Abonnements_Router = require("./routes/route_abonnement")
+const Paiements_Router = require("./routes/route_paiement")
 
 app.use(cors());
 app.use(express.json());
@@ -41,9 +42,10 @@ app.use("/api/categories", Categories_Router);
 app.use("/api/depenses", Depenses_Router);
 app.use("/api/fournisseurs", Fournisseurs_Router);
 app.use("/api/clients",Clients_Router)
-app.use("/api/credits",Credits_Router)
 app.use("/api/reglements", Reglement_Router)
 app.use("/api/mouvements", Mouvements_Router)
 app.use("/api/stats", Statistiques_Router)
+app.use("/api/abonnements",Abonnements_Router)
+app.use("/api/paiements",Paiements_Router)
 
 module.exports = app;
