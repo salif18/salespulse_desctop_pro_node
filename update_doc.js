@@ -16,7 +16,6 @@ const Users = require("./models/user_model");
 
 async function runMigration() {
   await mongoose.connect(process.env.DB_NAME);
-  console.log('✅ Connecté à MongoDB');
 
   // Étape 1 : Obtenir la liste des utilisateurs
   const users = await Users.find();
@@ -36,7 +35,7 @@ async function runMigration() {
       const adminId = userMap[userId];
 
       if (!adminId) {
-        console.log(`⛔ adminId introuvable pour ${collectionName} doc ${doc._id}`);
+        
         continue;
       }
 
