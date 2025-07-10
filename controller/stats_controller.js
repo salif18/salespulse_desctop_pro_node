@@ -167,6 +167,15 @@ exports.getStatistiquesGenerales = async (req, res) => {
     const montantRembourse = remboursements.reduce((acc, r) => acc + (r.montant || 0), 0);
     const etatCaisse = montantEncaisse - totalDepenses - montantRembourse;
 
+     // Statistiques promos
+    const margeMoyennePromo = await getMargeProduitsPromo(adminId);
+    const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
+
+    // Pour impact, il faut la date promo (à adapter selon ta logique)
+    // Exemple : date promo la plus récente
+    const datePromoDebut = new Date(); // ou récupérer depuis un produit promo
+    const impactPromoVentes = await getImpactPromoVentes(adminId, datePromoDebut);
+
     // Réponse finale
     return res.status(200).json({
       // Totaux financiers
@@ -198,7 +207,11 @@ exports.getStatistiquesGenerales = async (req, res) => {
       nombreClients,
       produitsEnStock,
       totalPiecesEnStock,
-      produitsRupture
+      produitsRupture,
+
+      margeMoyennePromo: Number(margeMoyennePromo.toFixed(2)),
+      nbPromoActifs,
+      impactPromoVentes
     });
 
   } catch (err) {
@@ -209,6 +222,74 @@ exports.getStatistiquesGenerales = async (req, res) => {
     });
   }
 };
+
+// la marge
+const getMargeProduitsPromo = async (adminId) => {
+  const produitsPromo = await Produits.find({
+    adminId,
+    isPromo: true,
+    prix_promo: { $gt: 0 }
+  });
+
+  let totalMarge = 0;
+  let count = 0;
+
+  produitsPromo.forEach(p => {
+    if (p.prix_promo && p.prix_achat) {
+      totalMarge += (p.prix_promo - p.prix_achat);
+      count++;
+    }
+  });
+
+  return count > 0 ? totalMarge / count : 0;
+};
+
+
+//impacte
+const getImpactPromoVentes = async (adminId, datePromoDebut) => {
+  const avant = await Ventes.aggregate([
+    { $match: {
+        adminId: new mongoose.Types.ObjectId(adminId),
+        createdAt: { $lt: datePromoDebut },
+        "produits.isPromo": false
+    }},
+    { $unwind: "$produits" },
+    { $match: { "produits.isPromo": false } },
+    { $group: {
+        _id: null,
+        totalQuantite: { $sum: "$produits.quantite" }
+    }}
+  ]);
+
+  const apres = await Ventes.aggregate([
+    { $match: {
+        adminId: new mongoose.Types.ObjectId(adminId),
+        createdAt: { $gte: datePromoDebut },
+        "produits.isPromo": false
+    }},
+    { $unwind: "$produits" },
+    { $match: { "produits.isPromo": false } },
+    { $group: {
+        _id: null,
+        totalQuantite: { $sum: "$produits.quantite" }
+    }}
+  ]);
+
+  return {
+    avant: avant[0]?.totalQuantite || 0,
+    apres: apres[0]?.totalQuantite || 0
+  };
+};
+
+
+// nombre de produit en promo 
+const getNbProduitsPromoActifs = async (adminId) => {
+  return await Produits.countDocuments({
+    adminId,
+    isPromo: true,
+  });
+};
+
 
 exports.getVentesDuJour = async (req, res) => {
   try {
