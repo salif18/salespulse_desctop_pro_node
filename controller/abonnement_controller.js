@@ -3,7 +3,7 @@ const Paiements = require("../models/paiement_model");
 
 // 🔒 Protéger avec middleware
 exports.createAbonnement = async (req, res) => {
-  const { type } = req.body; // "essai" ou "premium"
+  const { type, montant, moyen_paiement } = req.body; // "essai" ou "premium"
   const { adminId } = req.auth;
 
   try {
@@ -41,9 +41,9 @@ exports.createAbonnement = async (req, res) => {
     // Enregistrer le paiement après création d’abonnement
     await Paiements.create({
       adminId,
-      montant: type === "premium" ? 15000 : 0,
+      montant,
       type,
-      moyen_paiement: "manuel", // ou "mobile", "carte", etc.
+      moyen_paiement: moyen_paiement, // ou "mobile", "carte", etc.
       statut: "réussi"
     });
 
