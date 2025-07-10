@@ -2,7 +2,6 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const Abonnements = require("../models/abonnement_model");
-const Users = require("../models/user_model");
 const sendSms = require("../utils/sendSms");
 const nodemailer = require("nodemailer");
 
@@ -15,7 +14,7 @@ mongoose.connect(process.env.MONGODB_URI, {
 async function checkAbonnementExpiration() {
   const maintenant = new Date();
   const demain = new Date(maintenant);
-  demain.setDate(demain.getDate() + 1);
+  demain.setDate(demain.getDate());
 
   // 1️⃣ Notifier les abonnements qui expirent demain
   const abonnementsExpirant = await Abonnements.find({
