@@ -254,8 +254,13 @@ exports.getUsers = async (req, res) => {
       });
     }
 
-    // Récupérer tous les utilisateurs triés par date de création décroissante
-    const users = await Users.find({ adminId:adminId}).sort({ createdAt: -1 });
+   // Récupérer tous les utilisateurs (y compris l'admin) triés par date de création décroissante
+const users = await Users.find({
+  $or: [
+    { adminId: adminId },  // Les utilisateurs normaux avec ce adminId
+    { _id: adminId }       // L'administrateur lui-même
+  ]
+}).sort({ createdAt: -1 });
 
     // Formater la réponse
     const formattedUsers = users.map(user => ({

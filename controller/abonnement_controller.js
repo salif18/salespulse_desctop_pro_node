@@ -16,10 +16,13 @@ exports.createAbonnements = async (req, res) => {
     if (type === "essai") {
       dateFin = new Date(maintenant);
       dateFin.setDate(maintenant.getDate() + 7); // 7 jours
+    } else if (type === "mensuel") {
+      dateFin = new Date(maintenant);
+      dateFin.setMonth(maintenant.getMonth() + 1); // 3 mois
     } else if (type === "premium") {
       dateFin = new Date(maintenant);
       dateFin.setMonth(maintenant.getMonth() + 3); // 3 mois
-    } else {
+    }else {
       return res.status(400).json({ error: "Type d'abonnement invalide" });
     }
 

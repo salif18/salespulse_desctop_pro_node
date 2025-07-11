@@ -4,9 +4,10 @@ const cloudinary = require("../middlewares/cloudinary")
 exports.create = async (req, res) => {
     try {
         const userId = req.auth.userId;
+        const adminId = req.auth.adminId
 
         // Étape 1 : Rechercher s'il existe déjà un profil pour ce user
-        const profilExist = await Profils.findOne({ userId });
+        const profilExist = await Profils.findOne({ adminId });
 
         let imageUrl = "";
         let cloudinaryId = "";
@@ -41,7 +42,7 @@ exports.create = async (req, res) => {
 
         // Étape 5 : Sinon, on en crée un nouveau
         const nouveauProfil = new Profils({
-            userId,
+           ...req.body,
             image: imageUrl,
             cloudinaryId,
         });
@@ -54,27 +55,29 @@ exports.create = async (req, res) => {
     }
 };
 
+// Dans Profil_Controller.js
 exports.getProfils = async (req, res) => {
     try {
-           const { adminId } = req.auth; // On récupère adminId depuis le token
+        const { adminId } = req.auth;
 
-    if (!adminId) {
-      return res.status(400).json({
-        message: 'adminId est requis',
-      });
-    }
-        const profil = await Profils.findOne({ adminId });
-
-        if (!profil) {
-            return res.status(404).json({ message: 'Profil non trouvé' });
+        if (!adminId) {
+            return res.status(400).json({
+                message: 'adminId est requis',
+            });
         }
 
-        return res.status(200).json({ message: 'ok', profils: profil });
+        // Recherche UN SEUL profil correspondant à l'adminId
+        const profils = await Profils.findOne({ adminId });
+
+        if (!profils) {
+            return res.status(404).json({ message: 'Profil admin non trouvé' });
+        }
+
+        return res.status(200).json({ message: 'Profil admin trouvé', profils });
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
 };
-
 
 exports.update = async (req, res) => {
     try {
