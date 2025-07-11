@@ -246,40 +246,104 @@ const getMargeProduitsPromo = async (adminId) => {
 
 
 //impacte
+// const getImpactPromoVentes = async (adminId, datePromoDebut) => {
+//   const avant = await Ventes.aggregate([
+//     { $match: {
+//         adminId: new mongoose.Types.ObjectId(adminId),
+//         createdAt: { $lt: datePromoDebut },
+//         "produits.isPromo": false
+//     }},
+//     { $unwind: "$produits" },
+//     { $match: { "produits.isPromo": false } },
+//     { $group: {
+//         _id: null,
+//         totalQuantite: { $sum: "$produits.quantite" }
+//     }}
+//   ]);
+
+//   const apres = await Ventes.aggregate([
+//     { $match: {
+//         adminId: new mongoose.Types.ObjectId(adminId),
+//         createdAt: { $gte: datePromoDebut },
+//         "produits.isPromo": false
+//     }},
+//     { $unwind: "$produits" },
+//     { $match: { "produits.isPromo": false } },
+//     { $group: {
+//         _id: null,
+//         totalQuantite: { $sum: "$produits.quantite" }
+//     }}
+//   ]);
+
+//   return {
+//     avant: avant[0]?.totalQuantite || 0,
+//     apres: apres[0]?.totalQuantite || 0
+//   };
+// };
+
 const getImpactPromoVentes = async (adminId, datePromoDebut) => {
+  // 1. Ventes AVANT la promo (produits normaux uniquement)
   const avant = await Ventes.aggregate([
-    { $match: {
+    { 
+      $match: {
         adminId: new mongoose.Types.ObjectId(adminId),
         createdAt: { $lt: datePromoDebut },
-        "produits.isPromo": false
-    }},
+        "produits.isPromo": false // Seulement produits non promo
+      }
+    },
     { $unwind: "$produits" },
     { $match: { "produits.isPromo": false } },
-    { $group: {
+    { 
+      $group: {
         _id: null,
-        totalQuantite: { $sum: "$produits.quantite" }
-    }}
+        totalQuantite: { $sum: "$produits.quantite" },
+        totalMontant: { $sum: { $multiply: ["$produits.prix", "$produits.quantite"] } }
+      }
+    }
   ]);
 
+  // 2. Ventes APRES la promo (produits en promo uniquement)
   const apres = await Ventes.aggregate([
-    { $match: {
+    { 
+      $match: {
         adminId: new mongoose.Types.ObjectId(adminId),
         createdAt: { $gte: datePromoDebut },
-        "produits.isPromo": false
-    }},
+        "produits.isPromo": true // Seulement produits en promo
+      }
+    },
     { $unwind: "$produits" },
-    { $match: { "produits.isPromo": false } },
-    { $group: {
+    { $match: { "produits.isPromo": true } },
+    { 
+      $group: {
         _id: null,
-        totalQuantite: { $sum: "$produits.quantite" }
-    }}
+        totalQuantite: { $sum: "$produits.quantite" },
+        totalMontant: { $sum: { $multiply: ["$produits.prixPromo", "$produits.quantite"] } }
+      }
+    }
   ]);
 
   return {
-    avant: avant[0]?.totalQuantite || 0,
-    apres: apres[0]?.totalQuantite || 0
+    avant: {
+      quantite: avant[0]?.totalQuantite || 0,
+      montant: avant[0]?.totalMontant || 0
+    },
+    apres: {
+      quantite: apres[0]?.totalQuantite || 0,
+      montant: apres[0]?.totalMontant || 0
+    },
+    // Calcul de l'évolution en pourcentage
+    evolution: {
+      quantite: calculerEvolution(avant[0]?.totalQuantite, apres[0]?.totalQuantite),
+      montant: calculerEvolution(avant[0]?.totalMontant, apres[0]?.totalMontant)
+    }
   };
 };
+
+// Fonction helper pour calculer l'évolution en %
+function calculerEvolution(avant = 0, apres = 0) {
+  if (avant === 0) return apres > 0 ? 100 : 0;
+  return ((apres - avant) / avant) * 100;
+}
 
 
 // nombre de produit en promo 
