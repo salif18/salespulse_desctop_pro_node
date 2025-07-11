@@ -175,7 +175,13 @@ exports.update = async (req, res) => {
         }
 
         // Validation des données requises
-        const { nom, categories, description, prix_achat, prix_vente, stocks, seuil_alerte, unite, isPromo, prix_promo, date_achat, date_expiration } = req.body;
+        const { nom, categories, 
+          description, 
+          prix_achat, prix_vente, 
+          stocks, seuil_alerte, 
+          unite, isPromo, prix_promo, 
+          date_debut_promo, date_fin_promo,
+          date_achat, date_expiration } = req.body;
 
         // Trouver le produit existant
         const produit = await Produits.findById(id);
@@ -244,6 +250,8 @@ exports.update = async (req, res) => {
             unite: unite || produit.unite,
             isPromo: isPromo !== undefined ? isPromo : produit.isPromo,
             prix_promo: isPromo ? (prix_promo || produit.prix_promo) : 0,
+            date_debut_promo:date_debut_promo || produit.date_debut_promo,
+            date_fin_promo:date_fin_promo || produit.date_fin_promo,
             date_achat: date_achat || produit.date_achat,
             date_expiration: date_expiration || produit.date_expiration,
             updatedAt: new Date()

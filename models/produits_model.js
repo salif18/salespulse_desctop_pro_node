@@ -16,10 +16,12 @@ const produitSchema = new mongoose.Schema({
   unite: {type: String,default: 'pièce'},
   statut: { type: String, enum: ['disponible', 'indisponible'],default: 'disponible',},
   isPromo: {type: Boolean,default: false,},
+  date_debut_promo: { type: Date },       // ✅ Nouveau champ
+  date_fin_promo: { type: Date },         // ✅ Nouveau champ
   prix_promo: {type: Number,default: 0,},
   date_achat: { type: Date, required: true },
   date_expiration: {type: Date,},
-
+  
 }, { timestamps: true });
 
 module.exports = mongoose.model("Produits", produitSchema);
