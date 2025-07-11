@@ -15,7 +15,7 @@ exports.createAbonnements = async (req, res) => {
     // Durée selon le type
     if (type === "essai") {
       dateFin = new Date(maintenant);
-      dateFin.setDate(maintenant.getDate() + 1); // 7 jours
+      dateFin.setDate(maintenant.getDate() + 7); // 7 jours
     } else if (type === "premium") {
       dateFin = new Date(maintenant);
       dateFin.setMonth(maintenant.getMonth() + 3); // 3 mois
