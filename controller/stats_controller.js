@@ -7,174 +7,373 @@ const Reglements = require("../models/reglement_model")
 const mongoose = require("mongoose");
 
 
+// exports.getStatistiquesGenerales = async (req, res) => {
+//   try {
+//     const { adminId } = req.auth; // On récupère adminId depuis le token
+
+//     if (!adminId) {
+//       return res.status(400).json({
+//         message: 'adminId est requis',
+//       });
+//     }
+//     const { mois } = req.query;
+
+//     const start = mois
+//       ? new Date(`${mois}-01`)
+//       : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+//     const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+
+//     // Récupération des données en parallèle
+//     const [ventes, mouvements, produits, clients, depenses, remboursements] = await Promise.all([
+//       Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }),
+//       Mouvements.find({
+//         adminId,
+//         createdAt: { $gte: start, $lt: end },
+//         $or: [{ type: 'retrait' }, { type: 'perte' }]
+//       }),
+//       Produits.find({ adminId }),
+//       Clients.find({ adminId }),
+//       Depenses.find({ adminId, createdAt: { $gte: start, $lt: end } }),
+//       Reglements.find({
+//         adminId,
+//         type: "remboursement",
+//         createdAt: { $gte: start, $lt: end }
+//       })
+//     ]);
+
+//     // Initialisation des variables
+//     let totalVentesBrutes = 0;
+//     let montantEncaisse = 0;
+//     let resteTotal = 0;
+//     let totalRemises = 0;
+//     let totalRemisesProduits = 0;
+//     let totalRemiseGlobale = 0;
+//     let totalTVACollectee = 0;
+
+
+//     // Coûts d'achat
+//     let coutAchatTotal = 0;
+//     let coutAchatVentes = 0;
+//     let coutAchatPertes = 0;
+//     let coutAchatStock = 0;
+//     let quantitePertes = 0;
+
+//     // Dans la boucle des ventes
+//     ventes.forEach(v => {
+//       totalVentesBrutes += v.total || 0;
+//       montantEncaisse += v.montant_recu || 0;
+//       resteTotal += v.reste || 0;
+
+//       // Calcul des remises globales
+//       if (v.remiseGlobale) {
+//         const remise = v.remiseGlobaleType === 'pourcent'
+//           ? (v.total * v.remiseGlobale / 100)
+//           : v.remiseGlobale;
+//         totalRemiseGlobale += remise;
+//       }
+
+//       // Calcul du coût d'achat pour TOUTES les ventes (doit toujours être fait)
+//       v.produits.forEach(p => {
+//         if (p.prix_achat && p.quantite) {
+//           const cout = p.prix_achat * p.quantite;
+//           coutAchatVentes += cout;
+//         }
+//       });
+
+//       // Calcul de la TVA
+//       if (v.tvaGlobale > 0) {
+//         // Calcul TVA globale
+//         let totalHT = v.produits.reduce((sum, p) => {
+//           const prixRemise = p.remise_type === 'pourcent'
+//             ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+//             : (p.prix_unitaire - p.remise);
+//           return sum + (prixRemise * p.quantite);
+//         }, 0);
+
+//         // Appliquer la remise globale si elle existe
+//         if (v.remiseGlobale) {
+//           totalHT -= v.remiseGlobaleType === 'pourcent'
+//             ? (totalHT * v.remiseGlobale / 100)
+//             : v.remiseGlobale;
+//         }
+
+//         const montantTVA = (totalHT * v.tvaGlobale) / 100;
+//         totalTVACollectee += montantTVA;
+//       } else {
+//         // Calcul TVA par produit
+//         v.produits.forEach(p => {
+//           if (p.tva > 0) {
+//             const prixRemise = p.remise_type === 'pourcent'
+//               ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+//               : (p.prix_unitaire - p.remise);
+
+//             const baseHT = prixRemise * p.quantite;
+//             const montantTVA = (baseHT * p.tva) / 100;
+//             totalTVACollectee += montantTVA;
+//           }
+//         });
+//       }
+
+//       // Calcul des remises produits (doit toujours être fait)
+//       v.produits.forEach(p => {
+//         if (p.remise) {
+//           const remise = p.remise_type === 'pourcent'
+//             ? (p.prix_unitaire * p.quantite * p.remise / 100)
+//             : (p.remise * p.quantite);
+//           totalRemisesProduits += remise;
+//         }
+//       });
+//     });
+
+//     // Somme totale des remises
+//     totalRemises = totalRemiseGlobale + totalRemisesProduits;
+
+//     // Calcul des pertes d'inventaire
+//     mouvements.forEach(mvt => {
+//       // Vérification plus robuste
+//       if (!mvt.productId || !mvt.quantite || mvt.quantite >= 0) return;
+
+//       const prixAchat = mvt.prix_achat; // récupéré directement du mouvement
+//       if (!prixAchat) return;
+
+//       const quantitePerdue = Math.abs(mvt.quantite);
+//       const cout = prixAchat * quantitePerdue;
+
+
+//       coutAchatPertes += cout;
+//       quantitePertes += quantitePerdue;
+//     });
+
+//     // Calcul du stock actuel
+//     produits.forEach(p => {
+//       if (p.prix_achat && p.stocks) {
+//         coutAchatStock += p.prix_achat * p.stocks;
+//       }
+//     });
+
+//     // Calculs finaux
+//     coutAchatTotal = coutAchatVentes + coutAchatPertes + coutAchatStock;
+
+//     // Bénéfice = (Ventes brutes - Remises) - Coût d'achat des ventes
+//     const benefice = (totalVentesBrutes - totalRemises) - coutAchatVentes;
+
+//     // Autres statistiques
+//     const nombreVentes = ventes.length;
+//     const nombreClients = clients.length;
+//     const produitsEnStock = produits.filter(p => p.stocks > 0).length;
+//     const totalPiecesEnStock = produits.reduce((total, p) => total + (p.stocks > 0 ? p.stocks : 0), 0);
+//     const produitsRupture = produits.filter(p => p.stocks === 0).length;
+//     const totalDepenses = depenses.reduce((acc, d) => acc + (d.montants || 0), 0);
+//     const montantRembourse = remboursements.reduce((acc, r) => acc + (r.montant || 0), 0);
+//     const etatCaisse = montantEncaisse - totalDepenses - montantRembourse;
+
+//      // Statistiques promos
+//     const margeMoyennePromo = await getMargeProduitsPromo(adminId);
+//     const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
+
+//     // Pour impact, il faut la date promo (à adapter selon ta logique)
+//     // Exemple : date promo la plus récente
+//     const datePromoDebut = new Date(); // ou récupérer depuis un produit promo
+//     const impactPromoVentes = await getImpactPromoVentes(adminId, datePromoDebut);
+
+//     // Réponse finale
+//     return res.status(200).json({
+//       // Totaux financiers
+//       totalVentesBrutes: Number(totalVentesBrutes.toFixed(2)),
+//       montantEncaisse: Number(montantEncaisse.toFixed(2)),
+//       resteTotal: Number(resteTotal.toFixed(2)),
+
+//       // Détails des coûts
+//       coutAchatTotal: Number(coutAchatTotal.toFixed(2)),
+//       coutAchatVentes: Number(coutAchatVentes.toFixed(2)),
+//       coutAchatPertes: Number(coutAchatPertes.toFixed(2)),
+//       coutAchatStock: Number(coutAchatStock.toFixed(2)),
+//       quantitePertes,
+
+//       // Remises
+//       totalRemises: Number(totalRemises.toFixed(2)),
+//       totalRemisesProduits: Number(totalRemisesProduits.toFixed(2)),
+//       totalRemiseGlobale: Number(totalRemiseGlobale.toFixed(2)),
+//       totalTVACollectee: Number(totalTVACollectee.toFixed(2)),
+
+//       // Bénéfices
+//       benefice: Number(benefice.toFixed(2)),
+
+//       // Autres indicateurs
+//       totalDepenses: Number(totalDepenses.toFixed(2)),
+//       montantRembourse: Number(montantRembourse.toFixed(2)),
+//       etatCaisse: Number(etatCaisse.toFixed(2)),
+//       nombreVentes,
+//       nombreClients,
+//       produitsEnStock,
+//       totalPiecesEnStock,
+//       produitsRupture,
+
+//       margeMoyennePromo: Number(margeMoyennePromo.toFixed(2)),
+//       nbPromoActifs,
+//       impactPromoVentes
+//     });
+
+//   } catch (err) {
+//     console.error("Erreur stats:", err);
+//     return res.status(500).json({
+//       message: "Erreur lors du chargement des statistiques.",
+//       error: process.env.NODE_ENV === 'development' ? err.message : undefined
+//     });
+//   }
+// };
+
+// // la marge
+// const getMargeProduitsPromo = async (adminId) => {
+//   const produitsPromo = await Produits.find({
+//     adminId,
+//     isPromo: true,
+//     prix_promo: { $gt: 0 }
+//   });
+
+//   let totalMarge = 0;
+//   let count = 0;
+
+//   produitsPromo.forEach(p => {
+//     if (p.prix_promo && p.prix_achat) {
+//       totalMarge += (p.prix_promo - p.prix_achat);
+//       count++;
+//     }
+//   });
+
+//   return count > 0 ? totalMarge / count : 0;
+// };
+
 exports.getStatistiquesGenerales = async (req, res) => {
   try {
-    const { adminId } = req.auth; // On récupère adminId depuis le token
-
+    const { adminId } = req.auth;
     if (!adminId) {
-      return res.status(400).json({
-        message: 'adminId est requis',
-      });
+      return res.status(400).json({ message: 'adminId est requis' });
     }
-    const { mois } = req.query;
 
-    const start = mois
-      ? new Date(`${mois}-01`)
-      : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const { mois } = req.query;
+    const start = mois ? new Date(`${mois}-01`) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
 
-    // Récupération des données en parallèle
-    const [ventes, mouvements, produits, clients, depenses, remboursements] = await Promise.all([
-      Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }),
+    // Récupération des données en parallèle avec optimisations
+    const [
+      ventes, 
+      mouvements, 
+      produits, 
+      clients, 
+      depenses, 
+      remboursements,
+      statsPromo
+    ] = await Promise.all([
+      Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
       Mouvements.find({
         adminId,
         createdAt: { $gte: start, $lt: end },
         $or: [{ type: 'retrait' }, { type: 'perte' }]
-      }),
-      Produits.find({ adminId }),
-      Clients.find({ adminId }),
-      Depenses.find({ adminId, createdAt: { $gte: start, $lt: end } }),
+      }).lean(),
+      Produits.find({ adminId }).select('prix_achat stocks').lean(),
+      Clients.countDocuments({ adminId }),
+      Depenses.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
       Reglements.find({
         adminId,
         type: "remboursement",
         createdAt: { $gte: start, $lt: end }
-      })
+      }).lean(),
+      // Récupération des stats promo en parallèle
+      (async () => {
+        const margeMoyennePromo = await getMargeProduitsPromo(adminId);
+        const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
+        const datePromoDebut = await getDateDernierePromo(adminId);
+        const impactPromoVentes = await getImpactPromoVentes(adminId, datePromoDebut);
+        return { margeMoyennePromo, nbPromoActifs, impactPromoVentes };
+      })()
     ]);
 
-    // Initialisation des variables
-    let totalVentesBrutes = 0;
-    let montantEncaisse = 0;
-    let resteTotal = 0;
-    let totalRemises = 0;
-    let totalRemisesProduits = 0;
-    let totalRemiseGlobale = 0;
-    let totalTVACollectee = 0;
+    // Calculs optimisés
+    let {
+      totalVentesBrutes,
+      montantEncaisse,
+      resteTotal,
+      totalRemises,
+      totalRemisesProduits,
+      totalRemiseGlobale,
+      totalTVACollectee,
+      coutAchatVentes
+    } = ventes.reduce((acc, v) => {
+      acc.totalVentesBrutes += v.total || 0;
+      acc.montantEncaisse += v.montant_recu || 0;
+      acc.resteTotal += v.reste || 0;
 
-
-    // Coûts d'achat
-    let coutAchatTotal = 0;
-    let coutAchatVentes = 0;
-    let coutAchatPertes = 0;
-    let coutAchatStock = 0;
-    let quantitePertes = 0;
-
-    // Dans la boucle des ventes
-    ventes.forEach(v => {
-      totalVentesBrutes += v.total || 0;
-      montantEncaisse += v.montant_recu || 0;
-      resteTotal += v.reste || 0;
-
-      // Calcul des remises globales
       if (v.remiseGlobale) {
         const remise = v.remiseGlobaleType === 'pourcent'
           ? (v.total * v.remiseGlobale / 100)
           : v.remiseGlobale;
-        totalRemiseGlobale += remise;
+        acc.totalRemiseGlobale += remise;
       }
 
-      // Calcul du coût d'achat pour TOUTES les ventes (doit toujours être fait)
       v.produits.forEach(p => {
         if (p.prix_achat && p.quantite) {
-          const cout = p.prix_achat * p.quantite;
-          coutAchatVentes += cout;
-        }
-      });
-
-      // Calcul de la TVA
-      if (v.tvaGlobale > 0) {
-        // Calcul TVA globale
-        let totalHT = v.produits.reduce((sum, p) => {
-          const prixRemise = p.remise_type === 'pourcent'
-            ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
-            : (p.prix_unitaire - p.remise);
-          return sum + (prixRemise * p.quantite);
-        }, 0);
-
-        // Appliquer la remise globale si elle existe
-        if (v.remiseGlobale) {
-          totalHT -= v.remiseGlobaleType === 'pourcent'
-            ? (totalHT * v.remiseGlobale / 100)
-            : v.remiseGlobale;
+          acc.coutAchatVentes += p.prix_achat * p.quantite;
         }
 
-        const montantTVA = (totalHT * v.tvaGlobale) / 100;
-        totalTVACollectee += montantTVA;
-      } else {
-        // Calcul TVA par produit
-        v.produits.forEach(p => {
-          if (p.tva > 0) {
-            const prixRemise = p.remise_type === 'pourcent'
-              ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
-              : (p.prix_unitaire - p.remise);
-
-            const baseHT = prixRemise * p.quantite;
-            const montantTVA = (baseHT * p.tva) / 100;
-            totalTVACollectee += montantTVA;
-          }
-        });
-      }
-
-      // Calcul des remises produits (doit toujours être fait)
-      v.produits.forEach(p => {
         if (p.remise) {
           const remise = p.remise_type === 'pourcent'
             ? (p.prix_unitaire * p.quantite * p.remise / 100)
             : (p.remise * p.quantite);
-          totalRemisesProduits += remise;
+          acc.totalRemisesProduits += remise;
+        }
+
+        // Calcul TVA
+        if (v.tvaGlobale > 0 || p.tva > 0) {
+          const prixRemise = p.remise_type === 'pourcent'
+            ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+            : (p.prix_unitaire - p.remise);
+          
+          const baseHT = prixRemise * p.quantite;
+          const tauxTVA = v.tvaGlobale > 0 ? v.tvaGlobale : p.tva;
+          acc.totalTVACollectee += (baseHT * tauxTVA) / 100;
         }
       });
+
+      return acc;
+    }, {
+      totalVentesBrutes: 0,
+      montantEncaisse: 0,
+      resteTotal: 0,
+      totalRemises: 0,
+      totalRemisesProduits: 0,
+      totalRemiseGlobale: 0,
+      totalTVACollectee: 0,
+      coutAchatVentes: 0
     });
 
-    // Somme totale des remises
     totalRemises = totalRemiseGlobale + totalRemisesProduits;
 
-    // Calcul des pertes d'inventaire
-    mouvements.forEach(mvt => {
-      // Vérification plus robuste
-      if (!mvt.productId || !mvt.quantite || mvt.quantite >= 0) return;
-
-      const prixAchat = mvt.prix_achat; // récupéré directement du mouvement
-      if (!prixAchat) return;
-
-      const quantitePerdue = Math.abs(mvt.quantite);
-      const cout = prixAchat * quantitePerdue;
-
-
-      coutAchatPertes += cout;
-      quantitePertes += quantitePerdue;
-    });
-
-    // Calcul du stock actuel
-    produits.forEach(p => {
-      if (p.prix_achat && p.stocks) {
-        coutAchatStock += p.prix_achat * p.stocks;
+    // Calcul des pertes
+    const { coutAchatPertes, quantitePertes } = mouvements.reduce((acc, mvt) => {
+      if (mvt.productId && mvt.quantite < 0 && mvt.prix_achat) {
+        const quantitePerdue = Math.abs(mvt.quantite);
+        acc.coutAchatPertes += mvt.prix_achat * quantitePerdue;
+        acc.quantitePertes += quantitePerdue;
       }
-    });
+      return acc;
+    }, { coutAchatPertes: 0, quantitePertes: 0 });
 
-    // Calculs finaux
-    coutAchatTotal = coutAchatVentes + coutAchatPertes + coutAchatStock;
+    // Calcul du stock
+    const coutAchatStock = produits.reduce((acc, p) => 
+      p.prix_achat && p.stocks ? acc + (p.prix_achat * p.stocks) : acc, 0);
 
-    // Bénéfice = (Ventes brutes - Remises) - Coût d'achat des ventes
+    const coutAchatTotal = coutAchatVentes + coutAchatPertes + coutAchatStock;
     const benefice = (totalVentesBrutes - totalRemises) - coutAchatVentes;
 
-    // Autres statistiques
-    const nombreVentes = ventes.length;
-    const nombreClients = clients.length;
-    const produitsEnStock = produits.filter(p => p.stocks > 0).length;
-    const totalPiecesEnStock = produits.reduce((total, p) => total + (p.stocks > 0 ? p.stocks : 0), 0);
-    const produitsRupture = produits.filter(p => p.stocks === 0).length;
+    // Autres stats
     const totalDepenses = depenses.reduce((acc, d) => acc + (d.montants || 0), 0);
     const montantRembourse = remboursements.reduce((acc, r) => acc + (r.montant || 0), 0);
     const etatCaisse = montantEncaisse - totalDepenses - montantRembourse;
 
-     // Statistiques promos
-    const margeMoyennePromo = await getMargeProduitsPromo(adminId);
-    const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
-
-    // Pour impact, il faut la date promo (à adapter selon ta logique)
-    // Exemple : date promo la plus récente
-    const datePromoDebut = new Date(); // ou récupérer depuis un produit promo
-    const impactPromoVentes = await getImpactPromoVentes(adminId, datePromoDebut);
+    const produitsEnStock = produits.filter(p => p.stocks > 0).length;
+    const totalPiecesEnStock = produits.reduce((acc, p) => acc + (p.stocks > 0 ? p.stocks : 0), 0);
+    const produitsRupture = produits.filter(p => p.stocks === 0).length;
 
     // Réponse finale
     return res.status(200).json({
@@ -203,15 +402,16 @@ exports.getStatistiquesGenerales = async (req, res) => {
       totalDepenses: Number(totalDepenses.toFixed(2)),
       montantRembourse: Number(montantRembourse.toFixed(2)),
       etatCaisse: Number(etatCaisse.toFixed(2)),
-      nombreVentes,
-      nombreClients,
+      nombreVentes: ventes.length,
+      nombreClients: clients,
       produitsEnStock,
       totalPiecesEnStock,
       produitsRupture,
 
-      margeMoyennePromo: Number(margeMoyennePromo.toFixed(2)),
-      nbPromoActifs,
-      impactPromoVentes
+      // Stats promos
+      margeMoyennePromo: Number(statsPromo.margeMoyennePromo.toFixed(2)),
+      nbPromoActifs: statsPromo.nbPromoActifs,
+      impactPromoVentes: statsPromo.impactPromoVentes
     });
 
   } catch (err) {
@@ -223,128 +423,104 @@ exports.getStatistiquesGenerales = async (req, res) => {
   }
 };
 
-// la marge
-const getMargeProduitsPromo = async (adminId) => {
-  const produitsPromo = await Produits.find({
-    adminId,
-    isPromo: true,
-    prix_promo: { $gt: 0 }
-  });
-
-  let totalMarge = 0;
-  let count = 0;
-
-  produitsPromo.forEach(p => {
-    if (p.prix_promo && p.prix_achat) {
-      totalMarge += (p.prix_promo - p.prix_achat);
-      count++;
-    }
-  });
-
-  return count > 0 ? totalMarge / count : 0;
+// Helper function pour récupérer la date de la dernière promo
+const getDateDernierePromo = async (adminId) => {
+  const dernierProduitPromo = await Produits.findOne({ 
+    adminId, 
+    isPromo: true 
+  }).sort({ 'historiquePromo.dateDebut': -1 });
+  
+  return dernierProduitPromo?.historiquePromo?.[0]?.dateDebut || new Date();
 };
 
+// Version optimisée de getMargeProduitsPromo
+const getMargeProduitsPromo = async (adminId) => {
+  try {
+    const result = await Produits.aggregate([
+      { 
+        $match: { 
+          adminId: new mongoose.Types.ObjectId(adminId),
+          isPromo: true,
+          prix_promo: { $gt: 0 },
+          prix_achat: { $gt: 0 }
+        }
+      },
+      {
+        $project: {
+          marge: { $subtract: ["$prix_promo", "$prix_achat"] }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          moyenne: { $avg: "$marge" },
+          total: { $sum: "$marge" },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-//impacte
-// const getImpactPromoVentes = async (adminId, datePromoDebut) => {
-//   const avant = await Ventes.aggregate([
-//     { $match: {
-//         adminId: new mongoose.Types.ObjectId(adminId),
-//         createdAt: { $lt: datePromoDebut },
-//         "produits.isPromo": false
-//     }},
-//     { $unwind: "$produits" },
-//     { $match: { "produits.isPromo": false } },
-//     { $group: {
-//         _id: null,
-//         totalQuantite: { $sum: "$produits.quantite" }
-//     }}
-//   ]);
-
-//   const apres = await Ventes.aggregate([
-//     { $match: {
-//         adminId: new mongoose.Types.ObjectId(adminId),
-//         createdAt: { $gte: datePromoDebut },
-//         "produits.isPromo": false
-//     }},
-//     { $unwind: "$produits" },
-//     { $match: { "produits.isPromo": false } },
-//     { $group: {
-//         _id: null,
-//         totalQuantite: { $sum: "$produits.quantite" }
-//     }}
-//   ]);
-
-//   return {
-//     avant: avant[0]?.totalQuantite || 0,
-//     apres: apres[0]?.totalQuantite || 0
-//   };
-// };
+    return result[0]?.moyenne || 0;
+  } catch (error) {
+    console.error("Erreur dans getMargeProduitsPromo:", error);
+    return 0;
+  }
+};
 
 const getImpactPromoVentes = async (adminId, datePromoDebut) => {
-  // 1. Ventes AVANT la promo (produits normaux uniquement)
-  const avant = await Ventes.aggregate([
-    { 
-      $match: {
-        adminId: new mongoose.Types.ObjectId(adminId),
-        createdAt: { $lt: datePromoDebut },
-        "produits.isPromo": false // Seulement produits non promo
-      }
-    },
-    { $unwind: "$produits" },
-    { $match: { "produits.isPromo": false } },
-    { 
-      $group: {
-        _id: null,
-        totalQuantite: { $sum: "$produits.quantite" },
-        totalMontant: { $sum: { $multiply: ["$produits.prix", "$produits.quantite"] } }
-      }
-    }
-  ]);
+  try {
+    // 1. Cache des produits qui ont été en promo
+    const produitsPromoIds = await Produits.find({
+      adminId,
+      $or: [
+        { isPromo: true },
+        { 'historiquePromo.dateDebut': { $exists: true } }
+      ]
+    }).distinct('_id');
 
-  // 2. Ventes APRES la promo (produits en promo uniquement)
-  const apres = await Ventes.aggregate([
-    { 
-      $match: {
-        adminId: new mongoose.Types.ObjectId(adminId),
-        createdAt: { $gte: datePromoDebut },
-        "produits.isPromo": true // Seulement produits en promo
-      }
-    },
-    { $unwind: "$produits" },
-    { $match: { "produits.isPromo": true } },
-    { 
-      $group: {
-        _id: null,
-        totalQuantite: { $sum: "$produits.quantite" },
-        totalMontant: { $sum: { $multiply: ["$produits.prixPromo", "$produits.quantite"] } }
-      }
-    }
-  ]);
+    // 2. Requêtes parallélisées
+    const [avant, apres] = await Promise.all([
+      Ventes.aggregate([
+        { 
+          $match: {
+            adminId: new mongoose.Types.ObjectId(adminId),
+            createdAt: { $lt: datePromoDebut },
+            "produits.isPromo": false
+          }
+        },
+        { $unwind: "$produits" },
+        { $match: { "produits.isPromo": false } },
+        { $group: { _id: null, totalQuantite: { $sum: "$produits.quantite" }, totalMontant: { $sum: "$produits.sous_total" } } }
+      ]),
+      Ventes.aggregate([
+        { 
+          $match: {
+            adminId: new mongoose.Types.ObjectId(adminId),
+            createdAt: { $gte: datePromoDebut },
+            "produits.productId": { $in: produitsPromoIds }
+          }
+        },
+        { $unwind: "$produits" },
+        { $match: { "produits.productId": { $in: produitsPromoIds } } },
+        { $group: { _id: null, totalQuantite: { $sum: "$produits.quantite" }, totalMontant: { $sum: "$produits.sous_total" } } }
+      ])
+    ]);
 
-  return {
-    avant: {
-      quantite: avant[0]?.totalQuantite || 0,
-      montant: avant[0]?.totalMontant || 0
-    },
-    apres: {
-      quantite: apres[0]?.totalQuantite || 0,
-      montant: apres[0]?.totalMontant || 0
-    },
-    // Calcul de l'évolution en pourcentage
-    evolution: {
-      quantite: calculerEvolution(avant[0]?.totalQuantite, apres[0]?.totalQuantite),
-      montant: calculerEvolution(avant[0]?.totalMontant, apres[0]?.totalMontant)
-    }
-  };
+    return {
+      avant: {
+        quantite: avant[0]?.totalQuantite || 0,
+        montant: avant[0]?.totalMontant || 0
+      },
+      apres: {
+        quantite: apres[0]?.totalQuantite || 0,
+        montant: apres[0]?.totalMontant || 0
+      }
+    };
+  } catch (error) {
+    console.error("Erreur dans getImpactPromoVentes:", error);
+    return { avant: { quantite: 0, montant: 0 }, apres: { quantite: 0, montant: 0 } };
+  }
 };
-
-// Fonction helper pour calculer l'évolution en %
-function calculerEvolution(avant = 0, apres = 0) {
-  if (avant === 0) return apres > 0 ? 100 : 0;
-  return ((apres - avant) / avant) * 100;
-}
-
 
 // nombre de produit en promo 
 const getNbProduitsPromoActifs = async (adminId) => {
