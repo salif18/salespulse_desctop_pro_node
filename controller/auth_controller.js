@@ -82,7 +82,6 @@ exports.registre = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { contacts, password } = req.body;
-    console.log(req.body)
 
     const user = await Users.findOne({
       $or: [
