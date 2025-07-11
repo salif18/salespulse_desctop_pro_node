@@ -3,51 +3,6 @@ const jwt = require("jsonwebtoken");
 const Users = require("../models/user_model");
 const Abonnements = require("../models/abonnement_model"); // 🔁 à ajouter
 
-// const middleware = async (req, res, next) => {
-//   try {
-//     const token = req.headers.authorization?.split(" ")[1];
-//     if (!token) return res.status(401).json({ error: "Token manquant" });
-
-//     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-//     const user = await Users.findById(decoded.userId);
-//     if (!user) return res.status(401).json({ error: "Utilisateur introuvable" });
-
-//     // 🔍 Cherche un abonnement actif
-//     const abonnement = await Abonnements.findOne({
-//       adminId: user._id,
-//       statut: "actif"
-//     }).sort({ date_fin: -1 });
-
-//     const now = new Date();
-
-//     if (!abonnement || abonnement.date_fin < now) {
-//       // Marquer expiré si besoin
-//       if (abonnement && abonnement.statut !== "expiré") {
-//         abonnement.statut = "expiré";
-//         await abonnement.save();
-//       }
-
-//       return res.status(403).json({
-//         error: "Votre abonnement est expiré. Veuillez renouveler pour continuer.",
-//         abonnementExpiré: true,
-//       });
-//     }
-
-//     req.auth = {
-//       userId: user._id.toString(),
-//       adminId: user.adminId ? user.adminId : user._id.toString(),
-//       role: user.role,
-//       abonnement: abonnement.type, // essai ou premium
-//     };
-
-//     next();
-//   } catch (err) {
-//     return res.status(401).json({ error: "Token invalide ou expiré" });
-//   }
-// };
-
-// module.exports = middleware;
-
 const middleware = async (req, res, next) => {
   try {
     const token = req.headers.authorization?.split(" ")[1];
@@ -91,33 +46,33 @@ module.exports = middleware;
 
 
 
-// const middleware = async (req, res, next) => {
-//   try {
-//     const token = req.headers.authorization?.split(' ')[1];
-//     if (!token) {
-//       return res.status(401).json({ error: "Token manquant" });
-//     }
+const middlewareTokenOnly = async (req, res, next) => {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({ error: "Token manquant" });
+    }
 
-//     const decoded = jwt.verify(token, process.env.SECRET_KEY);
-//     const user = await Users.findById(decoded.userId);
+    const decoded = jwt.verify(token, process.env.SECRET_KEY);
+    const user = await Users.findById(decoded.userId);
 
-//     if (!user) {
-//       return res.status(401).json({ error: "Utilisateur introuvable" });
-//     }
+    if (!user) {
+      return res.status(401).json({ error: "Utilisateur introuvable" });
+    }
 
-//     // Injecter userId, adminId et rôle dans la requête
-//     req.auth = {
-//       userId: user._id.toString(),
-//       adminId: user.adminId ? user.adminId : user._id.toString(),
-//       role: user.role,
-//     };
+    // Injecter userId, adminId et rôle dans la requête
+    req.auth = {
+      userId: user._id.toString(),
+      adminId: user.adminId ? user.adminId : user._id.toString(),
+      role: user.role,
+    };
 
-//     next();
-//   } catch (err) {
-//     return res.status(401).json({ error: 'Token invalide ou expiré' });
-//   }
-// };
+    next();
+  } catch (err) {
+    return res.status(401).json({ error: 'Token invalide ou expiré' });
+  }
+};
 
-// module.exports = middleware;
+module.exports = middlewareTokenOnly;
 
 

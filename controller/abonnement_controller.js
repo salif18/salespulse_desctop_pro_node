@@ -2,9 +2,11 @@ const Abonnements = require("../models/abonnement_model");
 const Paiements = require("../models/paiement_model");
 
 // 🔒 Protéger avec middleware
-exports.createAbonnement = async (req, res) => {
+exports.createAbonnements = async (req, res) => {
   const { type, montant, moyen_paiement } = req.body; // "essai" ou "premium"
   const { adminId } = req.auth;
+
+  console.log(req.body)
 
   try {
     const maintenant = new Date();
