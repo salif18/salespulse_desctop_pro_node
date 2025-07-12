@@ -208,10 +208,10 @@ exports.updatePassword = async (req, res) => {
 exports.updateUser = async (req, res) => {
   try {
     const { name, boutique_name, numero, email, password } = req.body;
-    const { userId } = req.params;
+    const { adminId } = req.auth;
 
     // Trouver l'utilisateur par ID
-    const user = await Users.findById(userId);
+    const user = await Users.findById(adminId);
 
     if (!user) {
       return res.status(404).json({
