@@ -47,7 +47,7 @@ exports.registre = async (req, res) => {
     dateFin.setDate(dateDebut.getDate() + 7);
 
     await Abonnements.create({
-      userId: user._id,
+      adminId: user._id,
       type: "essai",
       date_debut: dateDebut,
       date_fin: dateFin,
