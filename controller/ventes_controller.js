@@ -107,13 +107,28 @@ exports.create = async (req, res) => {
         const monnaie = montant_recu - total;
         const reste = total - montant_recu;
 
+        
+        // ✅ Génération du numéro de facture
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const startOfMonth = new Date(year, now.getMonth(), 1);
+        const endOfMonth = new Date(year, now.getMonth() + 1, 0, 23, 59, 59);
+        const ventesDuMois = await Ventes.countDocuments({
+            date: { $gte: startOfMonth, $lte: endOfMonth }
+        });
+        const compteur = String(ventesDuMois + 1).padStart(4, '0');
+        const facture_number = `FAC-${year}-${month}-${compteur}`;
+
         // ✅ Enregistrement de la vente
         const nouvelleVente = new Ventes({
+            facture_number,
             userId,
             adminId,
             clientId: clientId || new mongoose.Types.ObjectId(),
             nom,
             contactClient,
+            client_address,
             produits: produitsComplets,
             total,
             remiseGlobale,
