@@ -8,7 +8,7 @@ const venteSchema = new mongoose.Schema({
   clientId: { type: mongoose.Schema.Types.ObjectId, }, // si tu gères des clients
   nom: { type: String },
   contactClient: { type: String },
-  client_address:{type:String},
+  client_address:{type:String ,},
   produits: [
     {
       productId: { type: mongoose.Schema.Types.ObjectId, ref: "Produits", required: true },

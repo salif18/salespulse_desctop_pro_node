@@ -13,6 +13,7 @@ exports.create = async (req, res) => {
             clientId,
             nom,
             contactClient,
+            client_address,
             produits,
             montant_recu,
             type_paiement,
