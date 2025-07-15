@@ -1,8 +1,6 @@
 const Reglements = require("../models/reglement_model")
 const Ventes = require("../models/ventes_model")
 
-const Reglements = require("../models/reglement_model");
-const Ventes = require("../models/ventes_model");
 
 exports.create = async (req, res) => {
   try {
