@@ -28,6 +28,7 @@ const venteSchema = new mongoose.Schema({
       frais_emballage: { type: Number, default: 0 }, // en FCFA
     },
   ],
+  operateur:{type:String},
   total: { type: Number, required: true },
   remiseGlobale: { type: Number, default: 0 },
   remiseGlobaleType: { type: String, enum: ['fcfa', 'pourcent'], default: 'fcfa' },
