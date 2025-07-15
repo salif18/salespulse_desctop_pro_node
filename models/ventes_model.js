@@ -17,7 +17,7 @@ const venteSchema = new mongoose.Schema({
       prix_achat: { type: Number, required: true }, // prix d'achat à ce moment-là
       prix_unitaire: Number,
       quantite: Number,
-      sous_total: Number, // prix_unitaire * quantite
+      // sous_total: Number, // prix_unitaire * quantite
       stocks: Number,
       remise: { type: Number, default: 0 }, // en FCFA ou %
       remise_type: { type: String, enum: ['fcfa', 'pourcent'], default: 'fcfa' },
