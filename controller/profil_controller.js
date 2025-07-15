@@ -3,7 +3,6 @@ const cloudinary = require("../middlewares/cloudinary")
 
 exports.create = async (req, res) => {
     try {
-        const userId = req.auth.userId;
         const adminId = req.auth.adminId
 
         // Étape 1 : Rechercher s'il existe déjà un profil pour ce user
