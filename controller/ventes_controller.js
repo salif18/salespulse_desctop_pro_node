@@ -1,12 +1,11 @@
 const Ventes = require("../models/ventes_model")
 const Produits = require("../models/produits_model");
-const moment = require("moment");
 const mongoose = require("mongoose");
 const Mouvements = require("../models/mouvement_model");
 
 exports.create = async (req, res) => {
     try {
-        console.log(req.body)
+     
         const {       
             userId,
             adminId,
