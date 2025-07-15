@@ -13,6 +13,7 @@ const clientSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  client_address:{type:String},
   image:{type:String},
   credit_total: { 
     type: Number,
