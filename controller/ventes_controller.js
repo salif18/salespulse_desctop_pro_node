@@ -5,8 +5,8 @@ const Mouvements = require("../models/mouvement_model");
 
 exports.create = async (req, res) => {
     try {
-     
-        const {       
+
+        const {
             userId,
             adminId,
             clientId,
@@ -20,9 +20,9 @@ exports.create = async (req, res) => {
             statut,
             remiseGlobale,
             remiseGlobaleType,
-            tvaGlobale ,
-            livraison ,
-            emballage ,
+            tvaGlobale,
+            livraison,
+            emballage,
             date = new Date()
         } = req.body;
 
@@ -76,8 +76,8 @@ exports.create = async (req, res) => {
                 nom: produit.nom,
                 image: produit.image || "",
                 prix_achat: produit.prix_achat,
-                prix_vente:item.prix_vente,
-                isPromo:item.isPromo,
+                prix_vente: item.prix_vente,
+                isPromo: item.isPromo,
                 prix_unitaire: item.prix_unitaire,
                 quantite: item.quantite,
                 sous_total,
@@ -90,6 +90,24 @@ exports.create = async (req, res) => {
             });
         }
 
+        // // 🧮 Appliquer la remise globale
+        // if (remiseGlobaleType === "pourcent") {
+        //     total = total - (total * remiseGlobale / 100);
+        // } else {
+        //     total = total - remiseGlobale;
+        // }
+
+        // // 🧾 TVA Globale
+        // if (tvaGlobale > 0) {
+        //     total = total + (total * tvaGlobale / 100);
+        // }
+
+        // // ➕ Ajouter livraison/emballage
+        // total += livraison + emballage;
+
+        // ➕ Ajouter livraison/emballage AVANT remise
+        total += livraison + emballage;
+
         // 🧮 Appliquer la remise globale
         if (remiseGlobaleType === "pourcent") {
             total = total - (total * remiseGlobale / 100);
@@ -97,18 +115,15 @@ exports.create = async (req, res) => {
             total = total - remiseGlobale;
         }
 
-        // 🧾 TVA Globale
+        // 🧾 TVA Globale sur le montant APRÈS remise
         if (tvaGlobale > 0) {
             total = total + (total * tvaGlobale / 100);
         }
 
-        // ➕ Ajouter livraison/emballage
-        total += livraison + emballage;
-
         const monnaie = montant_recu - total;
         const reste = total - montant_recu;
 
-        
+
         // ✅ Génération du numéro de facture
         const now = new Date();
         const year = now.getFullYear();
@@ -193,11 +208,11 @@ exports.getVentes = async (req, res, next) => {
     try {
         const { adminId } = req.auth; // On récupère adminId depuis le token
 
-    if (!adminId) {
-      return res.status(400).json({
-        message: 'adminId est requis',
-      });
-    }
+        if (!adminId) {
+            return res.status(400).json({
+                message: 'adminId est requis',
+            });
+        }
         const { dateDebut, dateFin, clientId } = req.query;
 
         const filter = {};
