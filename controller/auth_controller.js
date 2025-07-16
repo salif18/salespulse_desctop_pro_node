@@ -3,6 +3,17 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require('bcryptjs');
 const Users = require("../models/user_model");
 const Abonnements = require("../models/abonnement_model"); // 🔁 importe ton modèle Abonnement
+const cloudinary = require("../middlewares/cloudinary")
+
+const Produits = require("../models/produits_model");
+const Ventes = require("../models/ventes_model");
+const Mouvements = require("../models/mouvement_model");
+const Reglements = require("../models/reglement_model");
+const Depenses = require("../models/depenses_model");
+const Profils = require("../models/profil_model");
+const Categories = require("../models/categories_model");
+const Clients = require("../models/client_model");
+const Fournisseurs = require("../models/fournisseurs_model");
 
 
 // Durée de blocage en millisecondes (1 heure)
@@ -14,7 +25,7 @@ const TENTATIVES_MAX = 5;
 //FONCTION D'ENREGISTREMENT DES UTILISATEURS
 exports.registre = async (req, res) => {
   try {
-    const {numero, email, password } = req.body;
+    const { numero, email, password } = req.body;
 
     // Vérifiez si l'utilisateur existe
     const userExiste = await Users.findOne({
@@ -41,7 +52,7 @@ exports.registre = async (req, res) => {
     // Enregistrer l'utilisateur
     await user.save();
 
-     // 👉 Ajouter ici l’abonnement d’essai (7 jours)
+    // 👉 Ajouter ici l’abonnement d’essai (7 jours)
     const dateDebut = new Date();
     const dateFin = new Date();
     dateFin.setDate(dateDebut.getDate() + 7);
@@ -56,7 +67,7 @@ exports.registre = async (req, res) => {
 
     // Créer un token JWT
     const token = jwt.sign(
-      { userId: user._id , adminId: user.adminId || user._id },
+      { userId: user._id, adminId: user.adminId || user._id },
       process.env.SECRET_KEY,
       { expiresIn: "24h" }
     );
@@ -125,7 +136,7 @@ exports.login = async (req, res) => {
     user.tentativesExpires = Date.now();
 
     const token = jwt.sign(
-      { userId: user._id ,adminId: user.adminId || user._id},
+      { userId: user._id, adminId: user.adminId || user._id },
       process.env.SECRET_KEY,
       { expiresIn: "24h" }
     );
@@ -246,7 +257,7 @@ exports.updateUser = async (req, res) => {
 
 exports.getUsers = async (req, res) => {
   try {
-     const adminId = req.auth?.adminId; // On récupère adminId depuis le token
+    const adminId = req.auth?.adminId; // On récupère adminId depuis le token
 
     if (!adminId) {
       return res.status(400).json({
@@ -254,13 +265,13 @@ exports.getUsers = async (req, res) => {
       });
     }
 
-   // Récupérer tous les utilisateurs (y compris l'admin) triés par date de création décroissante
-const users = await Users.find({
-  $or: [
-    { adminId: adminId },  // Les utilisateurs normaux avec ce adminId
-    { _id: adminId }       // L'administrateur lui-même
-  ]
-}).sort({ createdAt: -1 });
+    // Récupérer tous les utilisateurs (y compris l'admin) triés par date de création décroissante
+    const users = await Users.find({
+      $or: [
+        { adminId: adminId },  // Les utilisateurs normaux avec ce adminId
+        { _id: adminId }       // L'administrateur lui-même
+      ]
+    }).sort({ createdAt: -1 });
 
     // Formater la réponse
     const formattedUsers = users.map(user => ({
@@ -286,5 +297,77 @@ const users = await Users.find({
       message: 'Erreur serveur lors de la récupération des utilisateurs',
       error: process.env.NODE_ENV === 'development' ? error.message : undefined
     });
+  }
+};
+
+
+
+exports.deleteUserAccount = async (req, res) => {
+  const { adminId, userId } = req.auth;
+
+  try {
+    const user = await Users.findById(userId);
+    if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
+
+    if (user.role === "admin" && user._id.toString() !== adminId) {
+      return res.status(403).json({ message: "Action non autorisée" });
+    }
+
+    // 🔁 1. Supprimer image profil Cloudinary
+    const profil = await Profils.findOne({ adminId });
+    if (profil && profil.cloudinaryId) {
+      await cloudinary.uploader.destroy(profil.cloudinaryId);
+    }
+
+    // 🔁 2. Supprimer les PRODUITS
+    const produits = await Produits.find({ adminId });
+    for (const produit of produits) {
+      if (produit.cloudinaryId) {
+        await cloudinary.uploader.destroy(produit.cloudinaryId);
+      }
+    }
+    await Produits.deleteMany({ adminId });
+
+    // 🔁 3. Supprimer les VENTES
+    await Ventes.deleteMany({ adminId });
+
+    // 🔁 4. Supprimer les DEPENSES
+    await Depenses.deleteMany({ adminId });
+
+    // 🔁 5. Supprimer les CLIENTS
+    const clients = await Clients.find({ adminId });
+    for (const client of clients) {
+      if (client.cloudinaryId) {
+        await cloudinary.uploader.destroy(client.cloudinaryId);
+      }
+    }
+    await Clients.deleteMany({ adminId });
+
+    // 🔁 6. Supprimer les FOURNISSEURS
+    await Fournisseurs.deleteMany({ adminId });
+
+    // 🔁 7. Supprimer les CATEGORIES
+    await Categories.deleteMany({ adminId });
+
+    // 🔁 8. Supprimer les utilisateurs créés par lui (ex. employés)
+    await Users.deleteMany({ adminId: adminId });
+
+    // 🔁 9. Supprimer l’utilisateur lui-même
+    await Users.findByIdAndDelete(userId);
+
+    // 🔁 10 supprimer mouvement
+    await Mouvements.deleteMany({ adminId });
+
+    // 🔁 11 supprimer reglements
+    await Reglements.deleteMany({ adminId })
+
+    // 🔁 12 supprimer abonnements
+    await Abonnements.deleteMany({ adminId })
+
+    res.status(200).json({ message: "Compte et toutes les données associées supprimés avec succès" });
+
+  } catch (error) {
+    console.error("Erreur suppression utilisateur :", error);
+    res.status(500).json({ message: "Erreur lors de la suppression du compte" });
   }
 };
