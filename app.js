@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 const path = require("path");
 const app = express();
+require('./script_promo'); // ou le bon chemin selon ton fichier
+require('./check_abonement_expiration'); 
 const Auth_Router = require("./routes/route_auth");
 const Profil_Router = require("./routes/route_profil")
 const Reset_Router = require("./routes/route_reset");
