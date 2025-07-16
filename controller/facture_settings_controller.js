@@ -5,7 +5,7 @@ const FactureSettings = require('../models/facture_settings_model');
 exports.updateFactureSettings = async (req, res) => {
   try {
 
-    const { prefix, footer } = req.body;
+    const { prefix, footer, alignement } = req.body;
     const {adminId }= req.auth
 
     if (!adminId) {
@@ -25,12 +25,17 @@ exports.updateFactureSettings = async (req, res) => {
       settings.factureFooter = footer;
     }
 
+    if (alignement && typeof alignement === 'string') {
+      settings.footerAlignement = alignement;
+    }
+
     await settings.save();
 
     res.status(200).json({
       message: 'Paramètres de facture mis à jour avec succès',
       facturePrefix: settings.facturePrefix,
-      factureFooter: settings.factureFooter
+      factureFooter: settings.factureFooter,
+      footerAlignement:settings.footerAlignement
     });
   } catch (error) {
     console.error('Erreur updateFactureSettings:', error);

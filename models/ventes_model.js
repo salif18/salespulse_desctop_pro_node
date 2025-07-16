@@ -44,7 +44,8 @@ const venteSchema = new mongoose.Schema({
   },
   statut: { type: String, enum: ['payée', 'crédit', 'partiel'], default: 'payée' },
   date: { type: Date, default: Date.now },
-  facture_footer:{type:String}
+  facture_footer:{type:String},
+  footer_alignement:{type:String, default:'gauche'}
 }, { timestamps: true });
 
 module.exports = mongoose.model("Ventes", venteSchema);

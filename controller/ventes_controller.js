@@ -117,6 +117,7 @@ exports.create = async (req, res) => {
     const settings = await FactureSettings.findOne({ adminId });
     const prefix = settings?.facturePrefix || 'FAC';
     const footer = settings?.factureFooter || '';
+    const footerAlignement = settings?.footerAlignement || 'gauche'
 
     const compteur = String(ventesDuMois + 1).padStart(4, '0');
     const facture_number = `${prefix}-${year}-${month}-${compteur}`;
@@ -144,6 +145,7 @@ exports.create = async (req, res) => {
       type_paiement,
       statut,
       facture_footer:footer,
+      footer_alignement:footerAlignement,
       date
     });
 
