@@ -2,6 +2,7 @@ const Ventes = require("../models/ventes_model")
 const Produits = require("../models/produits_model");
 const mongoose = require("mongoose");
 const Mouvements = require("../models/mouvement_model");
+const FactureSettings = require("../models/facture_settings_model")
 
 exports.create = async (req, res) => {
   try {
@@ -112,8 +113,13 @@ exports.create = async (req, res) => {
         $lte: new Date(year, now.getMonth() + 1, 0, 23, 59, 59)
       }
     });
+
+    const settings = await FactureSettings.findOne({ adminId });
+    const prefix = settings?.facturePrefix || 'FAC';
+    const footer = settings?.factureFooter || '';
+
     const compteur = String(ventesDuMois + 1).padStart(4, '0');
-    const facture_number = `FAC-${year}-${month}-${compteur}`;
+    const facture_number = `${prefix}-${year}-${month}-${compteur}`;
 
     // 💾 Enregistrement
     const nouvelleVente = new Ventes({
@@ -137,6 +143,7 @@ exports.create = async (req, res) => {
       reste: reste > 0 ? reste : 0,
       type_paiement,
       statut,
+      facture_footer:footer,
       date
     });
 
