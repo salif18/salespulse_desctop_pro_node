@@ -14,6 +14,7 @@ const commandeSchema = new mongoose.Schema({
   fournisseurName: { type: String, required: true },
   fournisseurContact: { type: String },
   fournisseurAddress: { type: String },
+  numeroCommande:{type:String},
   produits: [produitCommandeSchema],
   total:{type:Number},
   statut: { type: String, default: "en attente" }, // ou 'validée', 'livrée', etc.

@@ -1,5 +1,6 @@
 const Commandes = require("../models/commande_model");
 const Produits = require("../models/produits_model");
+const FactureSettings = require("../models/facture_settings_model")
 
 // POST /api/commandes
 exports.create = async (req, res) => {
@@ -7,8 +8,15 @@ exports.create = async (req, res) => {
        
         console.log(req.body)
 
+        const settings = await FactureSettings.findOne({ adminId });
+            const prefix = settings?.facturePrefix || 'FAC';
+           
+            const compteur = String(ventesDuMois + 1).padStart(4, '0');
+            const facture_number = `B${prefix}-${year}-${month}-${compteur}`;
+
         const nouvelleCommande = new Commandes({
-          ...req.body
+          ...req.body,
+          numeroCommande:facture_number
         });
 
         const savedCommande = await nouvelleCommande.save();
