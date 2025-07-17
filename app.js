@@ -21,6 +21,8 @@ const Statistiques_Router = require("./routes/route_stats")
 const Abonnements_Router = require("./routes/route_abonnement")
 const Paiements_Router = require("./routes/route_paiement")
 const FactureSettings_Router = require("./routes/route_facture_setings")
+const FactureProforma_Router = require("./routes/route_proforma")
+const Commande_Router = require("./routes/route_commande")
 
 app.use(cors());
 app.use(express.json());
@@ -51,5 +53,7 @@ app.use("/api/stats", Statistiques_Router)
 app.use("/api/abonnements",Abonnements_Router)
 app.use("/api/paiements",Paiements_Router)
 app.use("/api/facture/settings",FactureSettings_Router)
+app.use("/api/proforma",FactureProforma_Router)
+app.use("/api/commandes",Commande_Router)
 
 module.exports = app;

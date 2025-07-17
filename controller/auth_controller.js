@@ -304,9 +304,11 @@ exports.getUsers = async (req, res) => {
 
 exports.deleteUserAccount = async (req, res) => {
   const { adminId, userId } = req.auth;
-
+console.log("hello")
   try {
     const user = await Users.findById(userId);
+    console.log(user)
+    
     if (!user) return res.status(404).json({ message: "Utilisateur introuvable" });
 
     if (user.role === "admin" && user._id.toString() !== adminId) {
@@ -363,6 +365,8 @@ exports.deleteUserAccount = async (req, res) => {
 
     // 🔁 12 supprimer abonnements
     await Abonnements.deleteMany({ adminId })
+
+     console.log("delete")
 
     res.status(200).json({ message: "Compte et toutes les données associées supprimés avec succès" });
 
