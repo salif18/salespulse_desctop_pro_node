@@ -69,11 +69,67 @@ exports.getCommandes = async (req, res) => {
 
 
 // Valider une commande et mettre à jour les stocks
+// exports.validerCommande = async (req, res) => {
+//     try {
+//         console.log(req.params.id)
+//         const commandeId = req.params.id;
+
+//         const commande = await Commandes.findById(commandeId);
+//         if (!commande) {
+//             return res.status(404).json({ message: "Commande non trouvée." });
+//         }
+
+//         // Vérifie si déjà validée
+//         if (commande.statut === "reçue" || commande.statut === "validée") {
+//             return res.status(400).json({ message: "Commande déjà validée." });
+//         }
+
+//         // Mettre à jour les stocks
+//         for (let item of commande.produits) {
+//             const produit = await Produits.findById(item.productId);
+
+//             if (!produit) continue;
+//             const ancienStock = produit.stocks;
+//             // Ajoute la quantité commandée au stock existant
+//             produit.stocks += item.quantite;
+//             await produit.save();
+
+//             const nouveauMouvement = new Mouvements({
+//                 productId: produit._id,
+//                 adminId: adminId,
+//                 userId: adminId,
+//                 type: "ajout",
+//                 quantite: item.quantite,
+//                 prix_achat: item.prixAchat,
+//                 ancien_stock: ancienStock,
+//                 nouveau_stock: produit.stocks,
+//                 date: new Date(),
+//                 description: `Commande ${commande.numero} validée – produits ajoutés au stock.`
+//             });
+
+//             await nouveauMouvement.save();
+
+//         }
+
+//         // Mettre à jour le statut de la commande
+//         commande.statut = "reçue";
+//         await commande.save();
+
+
+//         return res.status(200).json({ message: "Commande validée et stock mis à jour." });
+
+//     } catch (error) {
+//         console.error("Erreur validation commande:", error);
+//         return res.status(500).json({ message: "Erreur serveur." });
+//     }
+// };
+
 exports.validerCommande = async (req, res) => {
     try {
-        console.log(req.params.id)
         const commandeId = req.params.id;
-
+        const adminId = req.auth.adminId || req.auth.userId; // prends ce qui convient, un string
+const userId = req.auth.userId; //
+console.log(req.body)
         const commande = await Commandes.findById(commandeId);
         if (!commande) {
             return res.status(404).json({ message: "Commande non trouvée." });
@@ -84,37 +140,43 @@ exports.validerCommande = async (req, res) => {
             return res.status(400).json({ message: "Commande déjà validée." });
         }
 
-        // Mettre à jour les stocks
-        for (let item of commande.produits) {
-            const produit = await Produits.findById(item.productId);
+        const produitsEnvoyes = req.body.produits; // Liste envoyée depuis le frontend
+        console.log(produitsEnvoyes)
 
+        if (!Array.isArray(produitsEnvoyes) || produitsEnvoyes.length === 0) {
+            return res.status(400).json({ message: "Aucun produit fourni." });
+        }
+
+        // Mettre à jour les stocks
+        for (let item of produitsEnvoyes) {
+            const produit = await Produits.findById(item.productId);
             if (!produit) continue;
+
             const ancienStock = produit.stocks;
-            // Ajoute la quantité commandée au stock existant
+
             produit.stocks += item.quantite;
             await produit.save();
 
-            const nouveauMouvement = new Mouvements({
-                productId: produit._id,
-                adminId: adminId,
-                userId: adminId,
-                type: "ajout",
-                quantite: item.quantite,
-                prix_achat: item.prixAchat,
-                ancien_stock: ancienStock,
-                nouveau_stock: produit.stocks,
-                date: new Date(),
-                description: `Commande ${commande.numero} validée – produits ajoutés au stock.`
-            });
+const mouvement = new Mouvements({
+  productId: produit._id,
+  adminId: adminId,       // string id, PAS l'objet complet
+  userId: userId,         // string id
+  type: "ajout",
+  quantite: item.quantite,
+  prix_achat: item.prixAchat,
+  ancien_stock: ancienStock,
+  nouveau_stock: produit.stocks,
+  date: new Date(),
+  description: `Commande ${commande.numero} validée – Stock mis à jour.`,
+});
 
-            await nouveauMouvement.save();
-
+            await mouvement.save();
         }
 
-        // Mettre à jour le statut de la commande
+        // Mettre à jour les produits dans la commande avec les nouvelles valeurs
+        commande.produits = produitsEnvoyes;
         commande.statut = "reçue";
         await commande.save();
-
 
         return res.status(200).json({ message: "Commande validée et stock mis à jour." });
 
