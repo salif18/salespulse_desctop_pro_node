@@ -1,6 +1,7 @@
 const Commandes = require("../models/commande_model");
 const Produits = require("../models/produits_model");
 const FactureSettings = require("../models/facture_settings_model")
+const Mouvements = require('../models/mouvement_model'); // adapte le chemin
 
 // POST /api/commandes
 exports.create = async (req, res) => {
@@ -73,16 +74,32 @@ exports.validerCommande = async (req, res) => {
       const produit = await Produits.findById(item.productId);
 
       if (!produit) continue;
-
+     const ancienStock = produit.stocks;
       // Ajoute la quantité commandée au stock existant
       produit.stocks += item.quantite;
-     console.log(produit)
       await produit.save();
+      
+     const nouveauMouvement = new Mouvements({
+          productId: produit._id,
+          adminId:adminId,
+          userId:adminId,
+          type:"ajout",
+          quantite: item.quantite,
+          prix_achat:item.prixAchat,
+          ancien_stock: ancienStock,
+          nouveau_stock: produit.stocks,
+          date: new Date(),
+          description: description || `Mouvement de type ajout effectué`,
+        });
+    
+        await nouveauMouvement.save();
+
     }
 
     // Mettre à jour le statut de la commande
     commande.statut = "reçue";
     await commande.save();
+
 
     return res.status(200).json({ message: "Commande validée et stock mis à jour." });
 
