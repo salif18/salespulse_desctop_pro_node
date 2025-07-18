@@ -1,9 +1,10 @@
 const Ventes = require("../models/ventes_model");
-const Clients = require("../models/client_model");
+const Retours = require("../models/retours_model"); // Import retours
 const Produits = require("../models/produits_model");
+const Clients = require("../models/client_model");
 const Mouvements = require("../models/mouvement_model");
 const Depenses = require("../models/depenses_model");
-const Reglements = require("../models/reglement_model")
+const Reglements = require("../models/reglement_model");
 const mongoose = require("mongoose");
 
 exports.getStatistiquesGenerales = async (req, res) => {
@@ -17,17 +18,19 @@ exports.getStatistiquesGenerales = async (req, res) => {
     const start = mois ? new Date(`${mois}-01`) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
 
-    // Récupération des données en parallèle avec optimisations
+    // Récupération des données en parallèle
     const [
-      ventes, 
-      mouvements, 
-      produits, 
-      clients, 
-      depenses, 
+      ventes,
+      retours,
+      mouvements,
+      produits,
+      clients,
+      depenses,
       remboursements,
       statsPromo
     ] = await Promise.all([
       Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
+      Retours.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
       Mouvements.find({
         adminId,
         createdAt: { $gte: start, $lt: end },
@@ -41,7 +44,7 @@ exports.getStatistiquesGenerales = async (req, res) => {
         type: "remboursement",
         createdAt: { $gte: start, $lt: end }
       }).lean(),
-      // Récupération des stats promo en parallèle
+      // Stats promo as before
       (async () => {
         const margeMoyennePromo = await getMargeProduitsPromo(adminId);
         const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
@@ -51,12 +54,11 @@ exports.getStatistiquesGenerales = async (req, res) => {
       })()
     ]);
 
-    // Calculs optimisés
+    // Calculs sur les ventes
     let {
       totalVentesBrutes,
       montantEncaisse,
       resteTotal,
-      totalRemises,
       totalRemisesProduits,
       totalRemiseGlobale,
       totalTVACollectee,
@@ -85,12 +87,11 @@ exports.getStatistiquesGenerales = async (req, res) => {
           acc.totalRemisesProduits += remise;
         }
 
-        // Calcul TVA
         if (v.tvaGlobale > 0 || p.tva > 0) {
           const prixRemise = p.remise_type === 'pourcent'
             ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
             : (p.prix_unitaire - p.remise);
-          
+
           const baseHT = prixRemise * p.quantite;
           const tauxTVA = v.tvaGlobale > 0 ? v.tvaGlobale : p.tva;
           acc.totalTVACollectee += (baseHT * tauxTVA) / 100;
@@ -102,14 +103,13 @@ exports.getStatistiquesGenerales = async (req, res) => {
       totalVentesBrutes: 0,
       montantEncaisse: 0,
       resteTotal: 0,
-      totalRemises: 0,
       totalRemisesProduits: 0,
       totalRemiseGlobale: 0,
       totalTVACollectee: 0,
       coutAchatVentes: 0
     });
 
-    totalRemises = totalRemiseGlobale + totalRemisesProduits;
+    const totalRemises = totalRemiseGlobale + totalRemisesProduits;
 
     // Calcul des pertes
     const { coutAchatPertes, quantitePertes } = mouvements.reduce((acc, mvt) => {
@@ -122,11 +122,19 @@ exports.getStatistiquesGenerales = async (req, res) => {
     }, { coutAchatPertes: 0, quantitePertes: 0 });
 
     // Calcul du stock
-    const coutAchatStock = produits.reduce((acc, p) => 
+    const coutAchatStock = produits.reduce((acc, p) =>
       p.prix_achat && p.stocks ? acc + (p.prix_achat * p.stocks) : acc, 0);
 
+    // **Calcul des retours**
+    const totalRetours = retours.reduce((acc, r) => {
+      const montantRetour = r.produits.reduce((sum, p) => sum + ((p.prixVente || 0) * p.quantite), 0);
+      return acc + montantRetour;
+    }, 0);
+
+    // Calcul bénéfice ajusté (on enlève totalRetours du CA)
+    const benefice = (totalVentesBrutes - totalRemises - totalRetours) - coutAchatVentes;
+
     const coutAchatTotal = coutAchatVentes + coutAchatPertes + coutAchatStock;
-    const benefice = (totalVentesBrutes - totalRemises) - coutAchatVentes;
 
     // Autres stats
     const totalDepenses = depenses.reduce((acc, d) => acc + (d.montants || 0), 0);
@@ -139,28 +147,24 @@ exports.getStatistiquesGenerales = async (req, res) => {
 
     // Réponse finale
     return res.status(200).json({
-      // Totaux financiers
       totalVentesBrutes: Number(totalVentesBrutes.toFixed(2)),
+      totalRetours: Number(totalRetours.toFixed(2)),             // ajouté
       montantEncaisse: Number(montantEncaisse.toFixed(2)),
       resteTotal: Number(resteTotal.toFixed(2)),
 
-      // Détails des coûts
       coutAchatTotal: Number(coutAchatTotal.toFixed(2)),
       coutAchatVentes: Number(coutAchatVentes.toFixed(2)),
       coutAchatPertes: Number(coutAchatPertes.toFixed(2)),
       coutAchatStock: Number(coutAchatStock.toFixed(2)),
       quantitePertes,
 
-      // Remises
       totalRemises: Number(totalRemises.toFixed(2)),
       totalRemisesProduits: Number(totalRemisesProduits.toFixed(2)),
       totalRemiseGlobale: Number(totalRemiseGlobale.toFixed(2)),
       totalTVACollectee: Number(totalTVACollectee.toFixed(2)),
 
-      // Bénéfices
       benefice: Number(benefice.toFixed(2)),
 
-      // Autres indicateurs
       totalDepenses: Number(totalDepenses.toFixed(2)),
       montantRembourse: Number(montantRembourse.toFixed(2)),
       etatCaisse: Number(etatCaisse.toFixed(2)),
@@ -170,7 +174,6 @@ exports.getStatistiquesGenerales = async (req, res) => {
       totalPiecesEnStock,
       produitsRupture,
 
-      // Stats promos
       margeMoyennePromo: Number(statsPromo.margeMoyennePromo.toFixed(2)),
       nbPromoActifs: statsPromo.nbPromoActifs,
       impactPromoVentes: statsPromo.impactPromoVentes
@@ -184,6 +187,189 @@ exports.getStatistiquesGenerales = async (req, res) => {
     });
   }
 };
+
+// N'oublie pas d'avoir aussi les fonctions getMargeProduitsPromo, getNbProduitsPromoActifs, getDateDernierePromo, getImpactPromoVentes,
+// comme dans ton code original, elles ne changent pas.
+
+
+// exports.getStatistiquesGenerales = async (req, res) => {
+//   try {
+//     const { adminId } = req.auth;
+//     if (!adminId) {
+//       return res.status(400).json({ message: 'adminId est requis' });
+//     }
+
+//     const { mois } = req.query;
+//     const start = mois ? new Date(`${mois}-01`) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+//     const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+
+//     // Récupération des données en parallèle avec optimisations
+//     const [
+//       ventes, 
+//       mouvements, 
+//       produits, 
+//       clients, 
+//       depenses, 
+//       remboursements,
+//       statsPromo
+//     ] = await Promise.all([
+//       Ventes.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
+//       Mouvements.find({
+//         adminId,
+//         createdAt: { $gte: start, $lt: end },
+//         $or: [{ type: 'retrait' }, { type: 'perte' }]
+//       }).lean(),
+//       Produits.find({ adminId }).select('prix_achat stocks').lean(),
+//       Clients.countDocuments({ adminId }),
+//       Depenses.find({ adminId, createdAt: { $gte: start, $lt: end } }).lean(),
+//       Reglements.find({
+//         adminId,
+//         type: "remboursement",
+//         createdAt: { $gte: start, $lt: end }
+//       }).lean(),
+//       // Récupération des stats promo en parallèle
+//       (async () => {
+//         const margeMoyennePromo = await getMargeProduitsPromo(adminId);
+//         const nbPromoActifs = await getNbProduitsPromoActifs(adminId);
+//         const datePromoDebut = await getDateDernierePromo(adminId);
+//         const impactPromoVentes = await getImpactPromoVentes(adminId, datePromoDebut);
+//         return { margeMoyennePromo, nbPromoActifs, impactPromoVentes };
+//       })()
+//     ]);
+
+//     // Calculs optimisés
+//     let {
+//       totalVentesBrutes,
+//       montantEncaisse,
+//       resteTotal,
+//       totalRemises,
+//       totalRemisesProduits,
+//       totalRemiseGlobale,
+//       totalTVACollectee,
+//       coutAchatVentes
+//     } = ventes.reduce((acc, v) => {
+//       acc.totalVentesBrutes += v.total || 0;
+//       acc.montantEncaisse += v.montant_recu || 0;
+//       acc.resteTotal += v.reste || 0;
+
+//       if (v.remiseGlobale) {
+//         const remise = v.remiseGlobaleType === 'pourcent'
+//           ? (v.total * v.remiseGlobale / 100)
+//           : v.remiseGlobale;
+//         acc.totalRemiseGlobale += remise;
+//       }
+
+//       v.produits.forEach(p => {
+//         if (p.prix_achat && p.quantite) {
+//           acc.coutAchatVentes += p.prix_achat * p.quantite;
+//         }
+
+//         if (p.remise) {
+//           const remise = p.remise_type === 'pourcent'
+//             ? (p.prix_unitaire * p.quantite * p.remise / 100)
+//             : (p.remise * p.quantite);
+//           acc.totalRemisesProduits += remise;
+//         }
+
+//         // Calcul TVA
+//         if (v.tvaGlobale > 0 || p.tva > 0) {
+//           const prixRemise = p.remise_type === 'pourcent'
+//             ? (p.prix_unitaire - (p.prix_unitaire * p.remise / 100))
+//             : (p.prix_unitaire - p.remise);
+          
+//           const baseHT = prixRemise * p.quantite;
+//           const tauxTVA = v.tvaGlobale > 0 ? v.tvaGlobale : p.tva;
+//           acc.totalTVACollectee += (baseHT * tauxTVA) / 100;
+//         }
+//       });
+
+//       return acc;
+//     }, {
+//       totalVentesBrutes: 0,
+//       montantEncaisse: 0,
+//       resteTotal: 0,
+//       totalRemises: 0,
+//       totalRemisesProduits: 0,
+//       totalRemiseGlobale: 0,
+//       totalTVACollectee: 0,
+//       coutAchatVentes: 0
+//     });
+
+//     totalRemises = totalRemiseGlobale + totalRemisesProduits;
+
+//     // Calcul des pertes
+//     const { coutAchatPertes, quantitePertes } = mouvements.reduce((acc, mvt) => {
+//       if (mvt.productId && mvt.quantite < 0 && mvt.prix_achat) {
+//         const quantitePerdue = Math.abs(mvt.quantite);
+//         acc.coutAchatPertes += mvt.prix_achat * quantitePerdue;
+//         acc.quantitePertes += quantitePerdue;
+//       }
+//       return acc;
+//     }, { coutAchatPertes: 0, quantitePertes: 0 });
+
+//     // Calcul du stock
+//     const coutAchatStock = produits.reduce((acc, p) => 
+//       p.prix_achat && p.stocks ? acc + (p.prix_achat * p.stocks) : acc, 0);
+
+//     const coutAchatTotal = coutAchatVentes + coutAchatPertes + coutAchatStock;
+//     const benefice = (totalVentesBrutes - totalRemises) - coutAchatVentes;
+
+//     // Autres stats
+//     const totalDepenses = depenses.reduce((acc, d) => acc + (d.montants || 0), 0);
+//     const montantRembourse = remboursements.reduce((acc, r) => acc + (r.montant || 0), 0);
+//     const etatCaisse = montantEncaisse - totalDepenses - montantRembourse;
+
+//     const produitsEnStock = produits.filter(p => p.stocks > 0).length;
+//     const totalPiecesEnStock = produits.reduce((acc, p) => acc + (p.stocks > 0 ? p.stocks : 0), 0);
+//     const produitsRupture = produits.filter(p => p.stocks === 0).length;
+
+//     // Réponse finale
+//     return res.status(200).json({
+//       // Totaux financiers
+//       totalVentesBrutes: Number(totalVentesBrutes.toFixed(2)),
+//       montantEncaisse: Number(montantEncaisse.toFixed(2)),
+//       resteTotal: Number(resteTotal.toFixed(2)),
+
+//       // Détails des coûts
+//       coutAchatTotal: Number(coutAchatTotal.toFixed(2)),
+//       coutAchatVentes: Number(coutAchatVentes.toFixed(2)),
+//       coutAchatPertes: Number(coutAchatPertes.toFixed(2)),
+//       coutAchatStock: Number(coutAchatStock.toFixed(2)),
+//       quantitePertes,
+
+//       // Remises
+//       totalRemises: Number(totalRemises.toFixed(2)),
+//       totalRemisesProduits: Number(totalRemisesProduits.toFixed(2)),
+//       totalRemiseGlobale: Number(totalRemiseGlobale.toFixed(2)),
+//       totalTVACollectee: Number(totalTVACollectee.toFixed(2)),
+
+//       // Bénéfices
+//       benefice: Number(benefice.toFixed(2)),
+
+//       // Autres indicateurs
+//       totalDepenses: Number(totalDepenses.toFixed(2)),
+//       montantRembourse: Number(montantRembourse.toFixed(2)),
+//       etatCaisse: Number(etatCaisse.toFixed(2)),
+//       nombreVentes: ventes.length,
+//       nombreClients: clients,
+//       produitsEnStock,
+//       totalPiecesEnStock,
+//       produitsRupture,
+
+//       // Stats promos
+//       margeMoyennePromo: Number(statsPromo.margeMoyennePromo.toFixed(2)),
+//       nbPromoActifs: statsPromo.nbPromoActifs,
+//       impactPromoVentes: statsPromo.impactPromoVentes
+//     });
+
+//   } catch (err) {
+//     console.error("Erreur stats:", err);
+//     return res.status(500).json({
+//       message: "Erreur lors du chargement des statistiques.",
+//       error: process.env.NODE_ENV === 'development' ? err.message : undefined
+//     });
+//   }
+// };
 
 // Helper function pour récupérer la date de la dernière promo
 const getDateDernierePromo = async (adminId) => {
