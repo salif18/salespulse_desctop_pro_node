@@ -23,6 +23,7 @@ const Paiements_Router = require("./routes/route_paiement")
 const FactureSettings_Router = require("./routes/route_facture_setings")
 const FactureProforma_Router = require("./routes/route_proforma")
 const Commande_Router = require("./routes/route_commande")
+const Retours_Router = require("./routes/route_retours")
 
 app.use(cors());
 app.use(express.json());
@@ -55,5 +56,6 @@ app.use("/api/paiements",Paiements_Router)
 app.use("/api/facture/settings",FactureSettings_Router)
 app.use("/api/proforma",FactureProforma_Router)
 app.use("/api/commandes",Commande_Router)
+app.use("/api/retours",Retours_Router)
 
 module.exports = app;

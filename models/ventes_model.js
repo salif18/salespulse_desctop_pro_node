@@ -44,6 +44,10 @@ const venteSchema = new mongoose.Schema({
   },
   statut: { type: String, enum: ['payée', 'crédit', 'partiel'], default: 'payée' },
   date: { type: Date, default: Date.now },
+  //new champs
+  retours: [{ type: mongoose.Schema.Types.ObjectId, ref: "Retours" }], // liste des retours liés
+  totalRetour: { type: Number, default: 0 }, // somme des montants retournés
+  montantRestantDu: { type: Number, default:0 }, // montant encore dû (après retours)
   facture_footer:{type:String},
   footer_alignement:{type:String, default:'gauche'}
 }, { timestamps: true });
