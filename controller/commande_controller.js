@@ -89,7 +89,7 @@ exports.validerCommande = async (req, res) => {
           ancien_stock: ancienStock,
           nouveau_stock: produit.stocks,
           date: new Date(),
-          description: description || `Mouvement de type ajout effectué`,
+          description: `Commande ${commande.numero} validée – produits ajoutés au stock.`
         });
     
         await nouveauMouvement.save();
