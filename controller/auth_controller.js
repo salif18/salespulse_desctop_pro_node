@@ -14,6 +14,8 @@ const Profils = require("../models/profil_model");
 const Categories = require("../models/categories_model");
 const Clients = require("../models/client_model");
 const Fournisseurs = require("../models/fournisseurs_model");
+const FactureSettings = require('../models/facture_settings_model');
+const Retours = require('../models/retours_model');
 
 
 // Durée de blocage en millisecondes (1 heure)
@@ -55,7 +57,7 @@ exports.registre = async (req, res) => {
     // 👉 Ajouter ici l’abonnement d’essai (7 jours)
     const dateDebut = new Date();
     const dateFin = new Date();
-    dateFin.setDate(dateDebut.getDate() + 7);
+    dateFin.setDate(dateDebut.getDate() + 1);
 
     await Abonnements.create({
       adminId: req.adminId || user._id,
@@ -365,6 +367,12 @@ console.log("hello")
 
     // 🔁 12 supprimer abonnements
     await Abonnements.deleteMany({ adminId })
+
+    // 🔁 13 supprimer Factures
+    await FactureSettings.deleteMany({ adminId })
+
+    // 🔁 14 supprimer abonnements
+    await Retours.deleteMany({ adminId })
 
      console.log("delete")
 
