@@ -42,8 +42,10 @@ const venteSchema = new mongoose.Schema({
     type: String,
     enum: ['cash', 'mobile money', 'transfert bancaire', 'crédit', 'partiel'], default: 'cash',
   },
-  statut: { type: String, enum: ['payée', 'crédit', 'partiel'], default: 'payée' },
+  isProforma:{type:Boolean, default:false},
+  statut: { type: String, enum: ['payée', 'crédit', 'partiel','converted','proforma'], default: 'payée' },
   date: { type: Date, default: Date.now },
+  type: { type: String, enum: ['invoice', 'proforma'], default: 'invoice' },
   //new champs
   retours: [{ type: mongoose.Schema.Types.ObjectId, ref: "Retours" }], // liste des retours liés
   totalRetour: { type: Number, default: 0 }, // somme des montants retournés

@@ -4,6 +4,32 @@ const mongoose = require("mongoose");
 const Mouvements = require("../models/mouvement_model");
 const FactureSettings = require("../models/facture_settings_model")
 
+async function genererNumeroFacture(adminId, isProforma = false) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const key = `${year}-${month}`;
+  const updateField = isProforma ? `proformaCounter.${key}` : `factureCounter.${key}`;
+
+  const settings = await FactureSettings.findOneAndUpdate(
+    { adminId },
+    { $inc: { [updateField]: 1 } },
+    { new: true, upsert: true }
+  );
+
+  const currentCount = isProforma
+    ? settings.proformaCounter?.get(key)
+    : settings.factureCounter?.get(key);
+console.log(currentCount)
+  const compteur = String(currentCount).padStart(4, '0');
+  const prefix = isProforma
+    ? `PRO-${settings.facturePrefix || 'FAC'}`
+    : settings.facturePrefix || 'FAC';
+
+  return `${prefix}-${year}-${month}-${compteur}`;
+}
+
+
 exports.create = async (req, res) => {
   try {
     const {
@@ -23,7 +49,9 @@ exports.create = async (req, res) => {
       tvaGlobale,
       livraison,
       emballage,
-      date = new Date()
+      date = new Date(),
+      isProforma,
+      type // Nouveau paramètre
     } = req.body;
 
     let totalProduits = 0;
@@ -104,33 +132,16 @@ exports.create = async (req, res) => {
     const reste = total - montant_recu;
 
     // ✅ Générer numéro de facture
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-
-    // Début et fin du mois pour filtrer
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-
-    const ventesDuMois = await Ventes.countDocuments({
-      adminId,
-      date: {
-        $gte: startOfMonth,
-        $lte: endOfMonth
-      }
-    });
-
     const settings = await FactureSettings.findOne({ adminId });
-    const prefix = settings?.facturePrefix || 'FAC';
     const footer = settings?.factureFooter || '';
     const footerAlignement = settings?.footerAlignement || 'gauche'
 
-    const compteur = String(ventesDuMois + 1).padStart(4, '0');
-    const facture_number = `${prefix}-${year}-${month}-${compteur}`;
+    const facture_number = await genererNumeroFacture(adminId, isProforma);
 
     // 💾 Enregistrement
     const nouvelleVente = new Ventes({
       facture_number,
+      isProforma, // Nouveau champ
       userId,
       adminId,
       clientId: clientId || new mongoose.Types.ObjectId(),
@@ -149,34 +160,37 @@ exports.create = async (req, res) => {
       monnaie: monnaie > 0 ? monnaie : 0,
       reste: reste > 0 ? reste : 0,
       type_paiement,
-      statut,
+      statut: isProforma ? 'proforma' : statut, // Statut spécifique pour pro forma
       facture_footer: footer,
       footer_alignement: footerAlignement,
+      type:isProforma ? 'proforma' : 'invoice',
       date
     });
 
     const venteSauvegardee = await nouvelleVente.save();
 
     // 📦 Mise à jour des stocks
-    for (const item of produits) {
-      const produit = await Produits.findById(item.productId);
-      const ancienStock = produit.stocks;
-      produit.stocks -= item.quantite;
-      await produit.save();
+    if (!isProforma) {
+      for (const item of produits) {
+        const produit = await Produits.findById(item.productId);
+        const ancienStock = produit.stocks;
+        produit.stocks -= item.quantite;
+        await produit.save();
 
-      const mouvement = new Mouvements({
-        productId: produit._id,
-        userId,
-        adminId,
-        type: "vente",
-        quantite: item.quantite,
-        prix_achat: item.prix_achat,
-        ancien_stock: ancienStock,
-        nouveau_stock: produit.stocks,
-        description: `Vente à ${nom || "client"}`
-      });
+        const mouvement = new Mouvements({
+          productId: produit._id,
+          userId,
+          adminId,
+          type: "vente",
+          quantite: item.quantite,
+          prix_achat: item.prix_achat,
+          ancien_stock: ancienStock,
+          nouveau_stock: produit.stocks,
+          description: `Vente à ${nom || "client"}`
+        });
 
-      await mouvement.save();
+        await mouvement.save();
+      }
     }
 
     return res.status(201).json({
@@ -190,6 +204,113 @@ exports.create = async (req, res) => {
       message: "Erreur lors de la création de la vente",
       error: error.message
     });
+  }
+};
+
+exports.convertToInvoice = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { adminId } = req.auth
+    console.log("farcture", id)
+    console.log("adminId", adminId)
+
+    if (!adminId) {
+      return res.status(400).json({ message: 'adminId est requis' });
+    }
+
+    const proforma = await Ventes.findOne({
+      _id: id,
+      isProforma: true,
+      adminId: new mongoose.Types.ObjectId(adminId) // important !
+    });
+
+    if (!proforma) {
+      return res.status(404).json({ message: "Proforma introuvable ou déjà convertie" });
+    }
+
+    console.log("facture touve", proforma)
+    // Vérification des stocks (version optimisée)
+    const produitsIds = proforma.produits.map(p => p.productId);
+    const produits = await Produits.find({ _id: { $in: produitsIds } });
+
+    const stockErrors = [];
+    for (const item of proforma.produits) {
+      const produit = produits.find(p => p._id.equals(item.productId));
+      if (!produit || produit.stocks < item.quantite) {
+        stockErrors.push({
+          produit: item.nom,
+          stock: produit?.stocks || 0,
+          demande: item.quantite
+        });
+      }
+    }
+
+    if (stockErrors.length > 0) {
+      return res.status(400).json({
+        message: "Stocks insuffisants",
+        errors: stockErrors
+      });
+    }
+
+    // Transaction MongoDB (sécurité)
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      // Mise à jour des stocks
+      const bulkOps = proforma.produits.map(item => ({
+        updateOne: {
+          filter: { _id: item.productId },
+          update: { $inc: { stocks: -item.quantite } }
+        }
+      }));
+
+      await Produits.bulkWrite(bulkOps, { session });
+
+      // Conversion
+      proforma.isProforma = false;
+      proforma.statut = 'payée';
+
+      const nouveauFactureNumber = await genererNumeroFacture(adminId, false);
+      proforma.facture_number = nouveauFactureNumber;
+
+      await proforma.save({ session });
+      await session.commitTransaction();
+      console.log("converits")
+
+      res.json({
+        success: true,
+        message: "✅ Proforma convertie en facture",
+        facture: proforma
+      });
+
+    } catch (error) {
+      await session.abortTransaction();
+      throw error;
+    } finally {
+      session.endSession();
+    }
+
+  } catch (error) {
+    console.error("❌ Erreur conversion:", error);
+    res.status(500).json({
+      success: false,
+      message: "Erreur serveur lors de la conversion",
+      error: error.message
+    });
+  }
+};
+
+
+exports.getProformas = async (req, res) => {
+  try {
+    const proformas = await Ventes.find({ isProforma: true })
+      .sort({ date: -1 })
+      .limit(100);
+
+    res.json({ proformas });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -207,7 +328,10 @@ exports.getVentes = async (req, res, next) => {
     }
     const { dateDebut, dateFin, clientId } = req.query;
 
-    const filter = {};
+    const filter = {
+      adminId,
+      type: 'invoice'  // ✅ On filtre uniquement les factures "finales"
+    };
 
     if (adminId) filter.adminId = adminId;
     if (clientId) filter.clientId = clientId;
