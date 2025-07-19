@@ -54,6 +54,21 @@ exports.getStatistiquesGenerales = async (req, res) => {
       })()
     ]);
 
+    const coutAchatsRetours = {};
+
+    retours.forEach(r => {
+  r.produits.forEach(p => {
+    const key = p.productId?.toString();
+    if (!key) return;
+
+    if (!coutAchatsRetours[key]) {
+      coutAchatsRetours[key] = { quantite: 0, prix_achat: p.prixAchat || 0 };
+    }
+
+    coutAchatsRetours[key].quantite += p.quantite;
+  });
+});
+
     // Calculs sur les ventes
     let {
       totalVentesBrutes,
@@ -76,9 +91,23 @@ exports.getStatistiquesGenerales = async (req, res) => {
       }
 
       v.produits.forEach(p => {
-        if (p.prix_achat && p.quantite) {
-          acc.coutAchatVentes += p.prix_achat * p.quantite;
-        }
+        // if (p.prix_achat && p.quantite) {
+        //   acc.coutAchatVentes += p.prix_achat * p.quantite;
+        // }
+
+         if (p.prix_achat && p.quantite) {
+    const productId = p.productId?.toString();
+    const quantiteVendue = p.quantite;
+
+    // Si ce produit a été retourné
+    const retour = coutAchatsRetours[productId];
+    const quantiteRetournee = retour ? retour.quantite : 0;
+
+    const quantiteFinale = quantiteVendue - quantiteRetournee;
+
+    // Attention à ne pas passer en négatif
+    acc.coutAchatVentes += p.prix_achat * Math.max(quantiteFinale, 0);
+  }
 
         if (p.remise) {
           const remise = p.remise_type === 'pourcent'
