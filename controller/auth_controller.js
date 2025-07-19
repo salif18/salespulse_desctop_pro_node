@@ -57,7 +57,7 @@ exports.registre = async (req, res) => {
     // 👉 Ajouter ici l’abonnement d’essai (7 jours)
     const dateDebut = new Date();
     const dateFin = new Date();
-    dateFin.setDate(dateDebut.getDate() + 1);
+    dateFin.setDate(dateDebut.getDate() + 7);
 
     await Abonnements.create({
       adminId: req.adminId || user._id,
