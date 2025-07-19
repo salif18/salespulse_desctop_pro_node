@@ -211,8 +211,6 @@ exports.convertToInvoice = async (req, res) => {
   try {
     const { id } = req.params;
     const { adminId } = req.auth
-    console.log("farcture", id)
-    console.log("adminId", adminId)
 
     if (!adminId) {
       return res.status(400).json({ message: 'adminId est requis' });
@@ -228,7 +226,6 @@ exports.convertToInvoice = async (req, res) => {
       return res.status(404).json({ message: "Proforma introuvable ou déjà convertie" });
     }
 
-    console.log("facture touve", proforma)
     // Vérification des stocks (version optimisée)
     const produitsIds = proforma.produits.map(p => p.productId);
     const produits = await Produits.find({ _id: { $in: produitsIds } });
@@ -270,6 +267,7 @@ exports.convertToInvoice = async (req, res) => {
       // Conversion
       proforma.isProforma = false;
       proforma.statut = 'payée';
+      proforma.type = 'invoice'
 
       const nouveauFactureNumber = await genererNumeroFacture(adminId, false);
       proforma.facture_number = nouveauFactureNumber;
