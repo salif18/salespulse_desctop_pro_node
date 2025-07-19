@@ -2,7 +2,7 @@ const express = require("express");
 const Router = express.Router();
 
 const Product_Controller = require("../controller/produits_controller");
-const middleware = require("../middlewares/AuthMiddleware");
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 // const uploadFile = require("../middlewares/multerlocale")
 const cloudFile = require("../middlewares/multercloudinar")
 

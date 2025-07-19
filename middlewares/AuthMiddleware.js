@@ -41,10 +41,6 @@ const middleware = async (req, res, next) => {
   }
 };
 
-module.exports = middleware;
-
-
-
 
 const middlewareTokenOnly = async (req, res, next) => {
   try {
@@ -73,6 +69,12 @@ const middlewareTokenOnly = async (req, res, next) => {
   }
 };
 
-module.exports = middlewareTokenOnly;
+
+
+// ✅ Exporter les deux middlewares dans un objet
+module.exports = {
+  middleware,
+  middlewareTokenOnly
+};
 
 

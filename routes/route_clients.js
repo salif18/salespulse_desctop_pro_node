@@ -3,7 +3,7 @@ const Router = express.Router();
 
 const Clients_Controller = require("../controller/client_controller");
 const cloudFile = require("../middlewares/multercloudinar")
-const middleware = require("../middlewares/AuthMiddleware");
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 
 
 Router.post("/",middleware,cloudFile,Clients_Controller.create);

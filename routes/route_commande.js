@@ -2,7 +2,7 @@ const express = require("express");
 const Router = express.Router();
 
 const Commande_Controller = require("../controller/commande_controller");
-const middleware = require("../middlewares/AuthMiddleware");
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 
 
 Router.post("/",middleware,Commande_Controller.create);

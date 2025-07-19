@@ -2,7 +2,7 @@ const express = require("express");
 const Router = express.Router();
 
 const Profil_Controller = require("../controller/profil_controller");
-const middleware = require("../middlewares/AuthMiddleware");
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 const cloudFile = require("../middlewares/multercloudinar")
 
 Router.post("/",middleware,cloudFile,Profil_Controller.create);

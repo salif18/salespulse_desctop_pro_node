@@ -2,7 +2,7 @@ const express = require("express");
 const Router = express.Router();
 
 const Mouvement_Controller = require("../controller/mouvement_controller");
-const middleware = require("../middlewares/AuthMiddleware");
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 
 
 Router.get("/",middleware,Mouvement_Controller.getMouvements);

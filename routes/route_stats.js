@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const getStatistiques  = require("../controller/stats_controller");
-const middleware = require("../middlewares/AuthMiddleware")
+const { middleware, middlewareTokenOnly } = require("../middlewares/AuthMiddleware"); 
 
 router.get("/",middleware, getStatistiques.getStatistiquesGenerales);
 router.get("/jour",middleware, getStatistiques.getVentesDuJour);
