@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const ProformaInvoiceSchema = new mongoose.Schema({
-  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // propriétaire
+  adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'Users', required: true }, // propriétaire
   clientName: { type: String, required: true },
   clientEmail: { type: String, required: true },
   items: [{

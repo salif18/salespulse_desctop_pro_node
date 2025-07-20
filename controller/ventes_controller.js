@@ -302,7 +302,8 @@ exports.convertToInvoice = async (req, res) => {
 
 exports.getProformas = async (req, res) => {
   try {
-    const proformas = await Ventes.find({ isProforma: true })
+     const { adminId } = req.auth;
+    const proformas = await Ventes.find({ isProforma: true ,adminId: adminId })
       .sort({ date: -1 })
       .limit(100);
 
