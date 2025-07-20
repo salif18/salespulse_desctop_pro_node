@@ -33,7 +33,7 @@ exports.create = async (req, res) => {
 // Lister toutes les factures proforma de l’admin
 exports.getProforma = async (req, res) => {
   try {
-    const { adminId }  = req.auth;
+    const adminId  = req.auth.adminId;
     const proformas = await ProformaInvoices.find({ adminId }).sort({ createdAt: -1 });
     res.json(proformas);
   } catch (err) {
