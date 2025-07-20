@@ -35,7 +35,7 @@ exports.getProforma = async (req, res) => {
   try {
     const adminId = req.auth.adminId;
     const proformas = await ProformaInvoices.find({ adminId }).sort({ createdAt: -1 });
-    res.json(proformas);
+    res.status(200).json(proformas);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -58,7 +58,7 @@ exports.valideProforma =async (req, res) => {
     proforma.validatedAt = new Date();
 
     await proforma.save();
-    res.json(proforma);
+    res.status(200).json(proforma);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
