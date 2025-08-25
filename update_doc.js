@@ -18,7 +18,7 @@ async function runMigration() {
   await connectDB()
 
   // Étape 1 : Obtenir la liste des utilisateurs
-  const users = await Users.find();
+  const users = await Users.find(); 
 
   // Étape 2 : Créer une map utilisateur => adminId
   const userMap = {};
