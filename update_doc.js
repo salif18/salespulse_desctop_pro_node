@@ -1,8 +1,6 @@
 // const mongoose = require('mongoose');
 require('dotenv').config();
 const connectDB = require("./database/connect_db");
-
-
 // 🧩 Import de tous les modèles
 const Categories = require("./models/categories_model");
 const Clients = require("./models/client_model");
@@ -16,7 +14,6 @@ const Ventes = require("./models/ventes_model");
 const Users = require("./models/user_model");
 
 async function runMigration() {
-  // await mongoose.connect(process.env.DB_NAME); 
   // Établir la connexion à la base de données
   await connectDB()
 

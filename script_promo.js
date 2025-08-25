@@ -1,5 +1,6 @@
 require('dotenv').config();
 const mongoose = require('mongoose');
+const connectDB = require("./database/connect_db");
 const Produits = require('./models/produits_model'); // adapte le chemin si besoin
 const cron = require('node-cron');
 
@@ -8,7 +9,7 @@ async function updatePromoStatus() {
   try {
     // Connexion si non déjà connectée
     if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(process.env.DB_NAME);
+      await connectDB();
     }
 
     const now = new Date();
@@ -22,7 +23,7 @@ async function updatePromoStatus() {
         $set: { isPromo: false, prix_promo: 0 },
       }
     );
-    // console.log(`🛠️ Produits mis à jour automatiquement : ${result.modifiedCount}`);
+    console.log(`🛠️ Produits mis à jour automatiquement : ${result.modifiedCount}`);
   } catch (error) {
     console.error("❌ Erreur :", error);
   }

@@ -3,11 +3,11 @@ const mongoose = require("mongoose");
 
 let isConnected = false;
 
-const connectDB = async () => {
+async function connectDB() {
   if (isConnected) return; // éviter de reconnecter plusieurs fois
 
   try {
-    const db = mongoose.connect(process.env.DB_NAME);
+    const db = await mongoose.connect(process.env.DB_NAME);
     isConnected = db.connections[0].readyState;
     console.log("✅ MongoDB connecté");
   } catch (err) {
