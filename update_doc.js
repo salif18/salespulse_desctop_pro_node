@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
-const dotenv = require('dotenv');
-dotenv.config();
+require('dotenv').config();
 
 // 🧩 Import de tous les modèles
 const Categories = require("./models/categories_model");
@@ -15,7 +14,7 @@ const Ventes = require("./models/ventes_model");
 const Users = require("./models/user_model");
 
 async function runMigration() {
-  await mongoose.connect(process.env.DB_NAME);
+  await mongoose.connect(process.env.DB_NAME); 
 
   // Étape 1 : Obtenir la liste des utilisateurs
   const users = await Users.find();
@@ -77,7 +76,7 @@ runMigration().catch(console.error);
 //           "node_modules/**",
 //           "models/**",
 //           ".env"
-//         ]
+//         ] 
 //       }
 //     }
 //   ],

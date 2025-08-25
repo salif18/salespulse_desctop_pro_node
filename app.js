@@ -1,9 +1,9 @@
 //CREATION DE MON APPLICATION 
 const express = require("express");
-const mongoose = require("mongoose");
+//const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path");
-const app = express();
+const connectDB = require("./database/connect_db");
+
 require('./script_promo'); // ou le bon chemin selon ton fichier
 require('./check_abonement_expiration'); 
 const Auth_Router = require("./routes/route_auth");
@@ -25,18 +25,15 @@ const FactureProforma_Router = require("./routes/route_proforma")
 const Commande_Router = require("./routes/route_commande")
 const Retours_Router = require("./routes/route_retours")
 
+const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Middleware pour servir les fichiers statiques
-app.use('/images', express.static(path.join(__dirname, 'public/images')));
-app.use('/photos', express.static(path.join(__dirname, 'public/photos')));
-app.use('/videos', express.static(path.join(__dirname, 'public/videos')));
-
 // Établir la connexion à la base de données
-mongoose.connect(process.env.DB_NAME)
-  .then(() => console.log("Base de donneés connectées"))
-  .catch(() => console.log("Echec de connection à la base des données"));
+connectDB()
+// mongoose.connect(process.env.DB_NAME)
+//   .then(() => console.log("Base de donneés connectées"))
+//   .catch(() => console.log("Echec de connection à la base des données"));
 
 // Configurer les routes
 app.use("/api/auth", Auth_Router);

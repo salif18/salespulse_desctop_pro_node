@@ -38,38 +38,3 @@ cron.schedule('0 0 * * *', () => {
   console.log("⏱️ Exécution CRON : vérification des promos expirées");
   updatePromoStatus();
 });
-
-
-// require('dotenv').config();
-// const mongoose = require('mongoose');
-// const Produits = require('./models/produits_model'); // Modifie le chemin
-
-// async function updatePromoStatus() {
-//   try {
-//      await mongoose.connect(process.env.DB_NAME)
-//        .then(() => console.log("Base de donneés connectées"))
-//        .catch(() => console.log("Echec de connection à la base des données"));
-     
-
-//     const now = new Date();
-
-//     const result = await Produits.updateMany(
-//       {
-//         isPromo: true,
-//         date_fin_promo: { $lt: now },
-//       },
-//       {
-//         $set: { isPromo: false },
-//       }
-//     );
-
-//     console.log(`🛠️ Produits mis à jour : ${result.modifiedCount}`);
-
-//     await mongoose.disconnect();
-//     console.log("🔌 Déconnecté de MongoDB");
-//   } catch (error) {
-//     console.error("❌ Erreur :", error);
-//   }
-// }
-
-// updatePromoStatus();
