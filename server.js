@@ -9,4 +9,5 @@ app.set(process.env.PORT);
 const server = http.createServer(app);
 
 //LECTURE DU SERVER DEMARE APP
-server.listen(process.env.PORT,()=>console.log(`Application en marche sur PORT:${process.env.PORT}`));
+server.listen(process.env.PORT,
+    () => console.log(`Application en marche sur PORT:${process.env.PORT}`));
