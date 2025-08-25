@@ -9,7 +9,6 @@ async function updatePromoStatus() {
     // Connexion si non déjà connectée
     if (mongoose.connection.readyState === 0) {
       await mongoose.connect(process.env.DB_NAME);
-      console.log("✅ Base de données connectée");
     }
 
     const now = new Date();
@@ -23,8 +22,7 @@ async function updatePromoStatus() {
         $set: { isPromo: false, prix_promo: 0 },
       }
     );
-
-    console.log(`🛠️ Produits mis à jour automatiquement : ${result.modifiedCount}`);
+    // console.log(`🛠️ Produits mis à jour automatiquement : ${result.modifiedCount}`);
   } catch (error) {
     console.error("❌ Erreur :", error);
   }

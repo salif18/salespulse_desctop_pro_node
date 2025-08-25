@@ -4,6 +4,9 @@ const express = require("express");
 const cors = require("cors");
 const connectDB = require("./database/connect_db");
 
+// Établir la connexion à la base de données
+connectDB()
+
 require('./script_promo'); // ou le bon chemin selon ton fichier
 require('./check_abonement_expiration'); 
 const Auth_Router = require("./routes/route_auth");
@@ -30,7 +33,6 @@ app.use(cors());
 app.use(express.json());
 
 // Établir la connexion à la base de données
-connectDB()
 // mongoose.connect(process.env.DB_NAME)
 //   .then(() => console.log("Base de donneés connectées"))
 //   .catch(() => console.log("Echec de connection à la base des données"));

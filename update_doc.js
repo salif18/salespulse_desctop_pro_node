@@ -1,5 +1,7 @@
-const mongoose = require('mongoose');
+// const mongoose = require('mongoose');
 require('dotenv').config();
+const connectDB = require("./database/connect_db");
+
 
 // 🧩 Import de tous les modèles
 const Categories = require("./models/categories_model");
@@ -14,7 +16,9 @@ const Ventes = require("./models/ventes_model");
 const Users = require("./models/user_model");
 
 async function runMigration() {
-  await mongoose.connect(process.env.DB_NAME); 
+  // await mongoose.connect(process.env.DB_NAME); 
+  // Établir la connexion à la base de données
+  await connectDB()
 
   // Étape 1 : Obtenir la liste des utilisateurs
   const users = await Users.find();

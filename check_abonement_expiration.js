@@ -1,15 +1,19 @@
 require("dotenv").config();
-const mongoose = require("mongoose");
+// const mongoose = require("mongoose");
 const Abonnements = require("./models/abonnement_model");
 const nodemailer = require("nodemailer");
 const cron = require("node-cron");
+const connectDB = require("./database/connect_db");
+
+// Établir la connexion à la base de données
+connectDB()
 
 // 🔄 Connexion à MongoDB une seule fois
-mongoose.connect(process.env.DB_NAME).then(() => {
-  console.log("✅ Connecté à MongoDB pour l'abonnement.");
-}).catch((err) => {
-  console.error("❌ Erreur de connexion MongoDB :", err);
-});
+// mongoose.connect(process.env.DB_NAME).then(() => {
+//   console.log("✅ Connecté à MongoDB pour l'abonnement.");
+// }).catch((err) => {
+//   console.error("❌ Erreur de connexion MongoDB :", err);
+// });
 
 async function checkAbonnementExpiration() {
   const maintenant = new Date();
