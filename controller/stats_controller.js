@@ -563,25 +563,25 @@ exports.getOperationsByUser = async (req, res) => {
       userId: new mongoose.Types.ObjectId(userId),
       type: "invoice",
       createdAt: { $gte: debut, $lt: fin }
-    }).sort({ createdAt: 1 });
+    }).sort({ createdAt: -1 });
 
     const reglements = await Reglements.find({
       userId: new mongoose.Types.ObjectId(userId),
       createdAt: { $gte: debut, $lt: fin }
-    }).sort({ createdAt: 1 });
+    }).sort({ createdAt: -1 });
 
     const produitsVendus = ventes.flatMap(v => v.produits);
 
     const mouvements = await Mouvements.find({
       userId: new mongoose.Types.ObjectId(userId),
       createdAt: { $gte: debut, $lt: fin }
-    }).populate("productId", "nom image prix_achat").sort({ createdAt: 1 });
+    }).populate("productId", "nom image prix_achat").sort({ createdAt: -1 });
 
 
     const depenses = await Depenses.find({
       userId: new mongoose.Types.ObjectId(userId),
       createdAt: { $gte: debut, $lt: fin }
-    }).sort({ createdAt: 1 });
+    }).sort({ createdAt: -1 });
 
     const stats = {
       totalVentes: ventes.length,
