@@ -9,7 +9,7 @@ async function connectDB() {
   try {
     const db = await mongoose.connect(process.env.DB_NAME);
     isConnected = db.connections[0].readyState;
-    console.log("✅ MongoDB connecté");
+    console.log("Server connecté à la base de données MongoDB ✅");
   } catch (err) {
     console.error("❌ Erreur connexion DB:", err);
     throw err;

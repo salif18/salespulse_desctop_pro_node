@@ -1,16 +1,10 @@
 require('dotenv').config();
-// const mongoose = require('mongoose');
-// const connectDB = require("./database/connect_db");
 const Produits = require('./models/produits_model'); // adapte le chemin si besoin
 const cron = require('node-cron');
 
 // ✅ Fonction principale
 async function updatePromoStatus() {
   try {
-    // Connexion si non déjà connectée
-    // if (mongoose.connection.readyState === 0) {
-    //   await connectDB();
-    // }
 
     const now = new Date();
 

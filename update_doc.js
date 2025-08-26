@@ -63,36 +63,3 @@ async function runMigration() {
 }
 
 runMigration().catch(console.error);
-
-
-// {
-//   "version": 2,
-//   "builds": [
-//     {
-//       "src": "./server.js",
-//       "use": "@vercel/node",
-//       "config": {
-//         "maxLambdaSize": "15mb",
-//         "includeFiles": [
-//           "node_modules/**",
-//           "models/**",
-//           ".env"
-//         ] 
-//       }
-//     }
-//   ],
-//   "routes": [
-//     {
-//       "src": "/(.*)",
-//       "dest": "/server.js",
-//       "methods": ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-//       "headers": {
-//         "Access-Control-Allow-Origin": "*",
-//         "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,PATCH,OPTIONS",
-//         "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With"
-//       }
-//     }
-//   ]
-// }
-
-

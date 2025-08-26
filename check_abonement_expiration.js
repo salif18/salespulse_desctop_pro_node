@@ -3,13 +3,9 @@ require("dotenv").config();
 const Abonnements = require("./models/abonnement_model");
 const nodemailer = require("nodemailer");
 const cron = require("node-cron");
-// const connectDB = require("./database/connect_db");
 
 async function checkAbonnementExpiration() {
-  
-  // Établir la connexion à la base de données
-  // await connectDB();
-
+ 
   const maintenant = new Date();
   const demain = new Date(maintenant);
   demain.setDate(demain.getDate() + 1);
