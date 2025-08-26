@@ -22,7 +22,6 @@ exports.create = async (req, res) => {
             date: { $gte: startOfMonth, $lte: endOfMonth }
         });
 
-
         const settings = await FactureSettings.findOne({ adminId });
         const prefix = settings?.facturePrefix || 'FAC';
         const compteur = String(commandesDuMois + 1).padStart(4, '0');
